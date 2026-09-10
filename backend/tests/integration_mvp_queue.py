@@ -14,7 +14,7 @@ from farm.api import app
 from farm.db import connection,uid,Jsonb
 
 with TestClient(app,headers={'X-Farm-Request':'1'}) as c:
-    c.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+    c.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
     idea=c.post('/ideas',json={'title':'TEST FIXTURE — заказ и итог','transcript':'Извлечь количество и цену из текста заказа и вычислить итог. Только техническая проверка.',
         'problem':'Извлечение quantity и unit_price из order_text; total = quantity * unit_price','priority':0})
     idea.raise_for_status();iid=idea.json()['id']

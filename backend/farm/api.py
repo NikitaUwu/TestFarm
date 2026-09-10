@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from psycopg import OperationalError
 
 from . import auth, storage
+from .accounts import Login, Registration
 from .config import load_configuration, snapshot
 from .db import connection, uid, Jsonb, audit
 from .providers import provider, ProviderError
@@ -50,19 +51,19 @@ def health():
     return {'status': 'available', 'version': '0.1.0'}
 
 
-class Login(BaseModel):
-    role: str
-    password: str = Field(max_length=200)
-
-
 @app.post('/auth/login')
 def login(body: Login, request: Request, response: Response):
-    return auth.login(request, response, body.role, body.password)
+    return auth.login(request, response, body.identifier, body.password)
+
+
+@app.post('/auth/register', status_code=201)
+def register(body: Registration, request: Request, response: Response):
+    return auth.register(request, response, body)
 
 
 @app.get('/auth/me')
 def me(principal=Depends(auth.actor)):
-    return principal
+    return auth.public_account(principal)
 
 
 @app.post('/auth/logout')

@@ -3,7 +3,7 @@ import os,json,time
 import httpx
 iid=os.environ['TEST_IDEA_ID'];rid=os.environ['TEST_RUN_ID']
 with httpx.Client(base_url='http://api:8000',headers={'X-Farm-Request':'1'},timeout=30) as c:
-    c.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+    c.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
     c.post(f'/ideas/{iid}/runs/{rid}/commands',json={'action':'retry'}).raise_for_status()
     deadline=time.monotonic()+300
     while time.monotonic()<deadline:

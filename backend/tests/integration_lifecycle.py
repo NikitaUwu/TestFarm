@@ -10,7 +10,7 @@ from farm import storage
 
 def run():
     with httpx.Client(base_url='http://api:8000', headers={'X-Farm-Request':'1'}, timeout=180) as c:
-        c.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+        c.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
         created=c.post('/ideas',json={'title':'Удаляемая проверка голосового сценария','transcript':'','priority':0})
         created.raise_for_status(); iid=created.json()['id']
         with connection() as db:

@@ -5,7 +5,7 @@ import httpx
 
 iid=os.environ['TEST_IDEA_ID']
 with httpx.Client(base_url='http://api:8000',headers={'X-Farm-Request':'1'},timeout=180) as c:
-    c.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+    c.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
     idea=c.get('/ideas/'+iid).json()
     assert 'демо' in idea['title'].lower() or idea['datasets'][0]['content']['provenance']=='demo'
     for run in idea['runs']:

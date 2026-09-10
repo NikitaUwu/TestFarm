@@ -7,7 +7,7 @@ import httpx
 if __name__ == '__main__':
     with httpx.Client(base_url=os.getenv('TEST_API_URL', 'http://api:8000'), timeout=180,
                       headers={'X-Farm-Request': '1'}) as client:
-        client.post('/auth/login', json={'role': 'reviewer', 'password': os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+        client.post('/auth/login', json={'identifier': 'demo', 'password': os.environ['REVIEWER_PASSWORD']}).raise_for_status()
         path = '/ideas/' + os.environ['TEST_IDEA_ID']
         before = client.get(path)
         before.raise_for_status()

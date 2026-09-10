@@ -4,7 +4,7 @@ from uuid import uuid4
 import httpx
 
 with httpx.Client(base_url='http://api:8000',headers={'X-Farm-Request':'1'},timeout=180) as c:
-    c.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+    c.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
     created=c.post('/ideas',json={'title':'Проверка поиска и ролей Groq — демоданные',
         'transcript':'Автоматически распределять обращения небольшой службы поддержки между категориями оплаты и доступа. '
         'Цель — сократить ручную маршрутизацию. Это синтетическая техническая проверка системы, а не свидетельство спроса.', 'priority':1})

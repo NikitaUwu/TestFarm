@@ -6,7 +6,7 @@ import httpx
 def run():
     idea_id='687a7d74-e78c-47ba-9b13-d4a33d846ebd'
     with httpx.Client(base_url='http://api:8000',headers={'X-Farm-Request':'1'},timeout=30) as c:
-        c.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
+        c.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).raise_for_status()
         idea=c.get('/ideas/'+idea_id).json(); previous=idea['reports'][0]
         latest=idea['runs'][0]
         dataset=next(d for d in idea['datasets'] if d['version_id']==latest['dataset_version_id'])

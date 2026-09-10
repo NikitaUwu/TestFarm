@@ -10,7 +10,7 @@ IDEA=os.environ['TEST_IDEA_ID']
 
 def run():
     with httpx.Client(base_url='http://api:8000',headers={'X-Farm-Request':'1'},timeout=60) as client:
-        assert client.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']}).is_success
+        assert client.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']}).is_success
         idea=client.get('/ideas/'+IDEA).json(); before=idea['reports'][0]
         assert before['content']['assessment']['recommendation']=='Недостаточно данных'
         assert len(before['content']['calculation']['variants'])==2

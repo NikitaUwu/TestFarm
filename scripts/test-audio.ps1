@@ -4,7 +4,7 @@ $farmRoot=Split-Path -Parent $PSScriptRoot
 $farmPassword=(Get-Content (Join-Path $farmRoot '.env') | Where-Object {$_ -match '^REVIEWER_PASSWORD='}).Substring(18)
 $farmClient=[Net.Http.HttpClient]::new()
 try {
-  $farmLogin=[Net.Http.StringContent]::new((@{role='reviewer';password=$farmPassword}|ConvertTo-Json),[Text.Encoding]::UTF8,'application/json')
+  $farmLogin=[Net.Http.StringContent]::new((@{identifier='demo';password=$farmPassword}|ConvertTo-Json),[Text.Encoding]::UTF8,'application/json')
   $farmPassword=$null
   $farmResponse=$farmClient.PostAsync('http://localhost:8000/auth/login',$farmLogin).GetAwaiter().GetResult()
   $farmResponse.EnsureSuccessStatusCode() | Out-Null

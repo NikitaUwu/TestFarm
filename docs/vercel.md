@@ -33,6 +33,8 @@ Deployment ef42c97 успешно установил зависимости, с�
 
 ## Ограничения
 
+После перехода на регистрацию (2026-09-10) backend нужно обновить вместе с Web: `docker compose build api migrate web` и `docker compose up -d api web`. Миграция 008 сохраняет прежние данные, вводит логины admin/demo для исходных аккаунтов и создаёт таблицу новых аккаунтов. API_URL остаётся прежним, дополнительные секреты для регистрации в Vercel не нужны. Регистрация и вход выполняются сервером через существующий Next.js proxy.
+
 Текущий Next.js proxy передаёт запросы backend. Лимит тела Vercel Function 4,5 МБ ограничивает загрузку аудио через этот путь, несмотря на более высокий локальный лимит. Для больших файлов потребуется отдельный механизм прямой загрузки. PostgreSQL, MinIO и постоянный Worker не развёртываются этим проектом Vercel.
 
 Источники: [выбор package manager](https://vercel.com/docs/package-managers), [настройки сборки](https://vercel.com/docs/builds/configure-a-build), [лимиты функций](https://vercel.com/docs/functions/limitations).

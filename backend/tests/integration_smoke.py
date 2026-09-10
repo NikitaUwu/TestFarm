@@ -10,7 +10,7 @@ import httpx
 def run():
     base=os.getenv('TEST_API_URL','http://api:8000')
     with httpx.Client(base_url=base,timeout=180,headers={'X-Farm-Request':'1'}) as client:
-        response=client.post('/auth/login',json={'role':'reviewer','password':os.environ['REVIEWER_PASSWORD']})
+        response=client.post('/auth/login',json={'identifier':'demo','password':os.environ['REVIEWER_PASSWORD']})
         assert response.status_code==200, f'login {response.status_code}'
         created=client.post('/ideas',json={'title':'Интеграционная проверка — демонстрационные данные','transcript':'Классифицировать обращения поддержки по категории. Это проверка системы, не исследование спроса.','priority':1})
         assert created.status_code==201, f'create {created.status_code}'
@@ -21,7 +21,7 @@ def run():
         assert updated.json()['current_version']==2
         assert client.put('/ideas/'+iid,json={**content,'expected_version':1}).status_code==409
         with httpx.Client(base_url=base,timeout=10) as owner:
-            assert owner.post('/auth/login',json={'role':'owner','password':os.environ['OWNER_PASSWORD']}).status_code==200
+            assert owner.post('/auth/login',json={'identifier':'admin','password':os.environ['OWNER_PASSWORD']}).status_code==200
             assert owner.get('/ideas/'+iid).status_code==404, 'cross-tenant read permitted'
         assert httpx.get(base+'/ideas/'+iid).status_code==401
         data={'name':'Технический smoke, не бизнес-данные','source':'Синтетические обращения агента для проверки реализации','period':'2026-09-08','provenance':'demo','labels':['оплата','доступ'],

@@ -6,22 +6,28 @@ import IdeaEditor from './IdeaEditor';
 import Research from './Research';
 import Reports from './Reports';
 import Settings from './Settings';
+import AuthForm,{Account} from './AuthForm';
 
 const navigation=[['funnel','Воронка'],['plus','Новая идея'],['card','Карточка'],['activity','Ход работы'],['chart','Прогоны и эффективность'],['report','Отчёт'],['settings','Настройки и документация']];
 export default function Farm(){
-  const [session,setSession]=useState<any>(null),[checked,setChecked]=useState(false),[error,setError]=useState('');
+  const [session,setSession]=useState<Account|null>(null),[checked,setChecked]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{api<Account>('/auth/me').then(setSession).catch(e=>{if(!(e instanceof ApiError&&e.status===401))setError(e.message);}).finally(()=>setChecked(true));},[]);
+  if(!checked)return <main className="auth"><p role="status">Подключение к ферме…</p></main>;
+  if(!session)return <AuthForm onLogin={account=>{setError('');setSession(account);}} error={error}/>;
+  return <Workspace key={session.id} session={session} onLogout={()=>setSession(null)}/>;
+}
+
+function Workspace({session,onLogout}:{session:Account;onLogout:()=>void}){
+  const [error,setError]=useState('');
   const [view,setView]=useState('funnel'),[ideas,setIdeas]=useState<Idea[]>([]),[selected,setSelected]=useState(''),[detail,setDetail]=useState<any>(null);
   const [integrations,setIntegrations]=useState<any>(null),[menu,setMenu]=useState(false),[loading,setLoading]=useState(false);
   const [archive,setArchive]=useState(false),[search,setSearch]=useState(''),[priority,setPriority]=useState('all');
   const refresh=useCallback(async()=>{try{setIdeas(await api('/ideas'));if(selected)setDetail(await api('/ideas/'+selected));}catch(e){setError((e as Error).message);}},[selected]);
-  useEffect(()=>{api('/auth/me').then(setSession).catch(e=>{if(!(e instanceof ApiError&&e.status===401))setError(e.message);}).finally(()=>setChecked(true));},[]);
   useEffect(()=>{if(session){void refresh();api('/integrations').then(setIntegrations).catch(()=>setIntegrations(null));}},[session,refresh]);
   useEffect(()=>{if(!session)return;const timer=setInterval(()=>void refresh(),5000);return()=>clearInterval(timer);},[session,refresh]);
   const navigate=(id:string)=>{setView(id);setMenu(false);setError('');};
   const choose=(id:string,target='card')=>{setSelected(id);setDetail(null);navigate(target);};
   const saved=async(id:string)=>{setSelected(id);setView('card');setDetail(await api('/ideas/'+id));await refresh();};
-  if(!checked)return <main className="auth"><p role="status">Подключение к ферме…</p></main>;
-  if(!session)return <Login onLogin={setSession} error={error}/>;
   const visible=ideas.filter(i=>(i.stage==='archived')===archive&&i.title.toLowerCase().includes(search.toLowerCase())&&(priority==='all'||i.priority===Number(priority)));
   const current=detail?.id===selected?detail:null;
   return <div className="app-shell">
@@ -29,7 +35,7 @@ export default function Farm(){
     <aside className={'sidebar '+(menu?'open':'')}>
       <button className="brand" onClick={()=>navigate('funnel')}><span className="brand-mark">⌄</span><span>Продуктовая ферма</span></button>
       <nav aria-label="Основная навигация">{navigation.map(([id,label])=><button key={id} onClick={()=>navigate(id)} className={'nav-item '+(view===id?'selected':'')} aria-current={view===id?'page':undefined}><Icon name={id}/><span>{label}</span></button>)}</nav>
-      <div className="sidebar-bottom"><p className="provider-status"><span className={'status-dot '+(integrations?.provider?.status==='available'?'green':'')}/><span>ИИ-провайдер: {integrations?.provider?.status==='available'?'доступен':integrations?.provider?.status==='not_configured'?'не настроено':'недоступен'}</span></p><button className="nav-item" onClick={async()=>{await post('/auth/logout');setSession(null);}} title="Выйти"><Icon name="user"/>{session.name}<span className="logout">Выйти</span></button></div>
+      <div className="sidebar-bottom"><p className="provider-status"><span className={'status-dot '+(integrations?.provider?.status==='available'?'green':'')}/><span>ИИ-провайдер: {integrations?.provider?.status==='available'?'доступен':integrations?.provider?.status==='not_configured'?'не настроено':'недоступен'}</span></p><button className="nav-item" onClick={async()=>{try{await post('/auth/logout');onLogout();}catch(err){setError((err as Error).message);}}} title="Выйти"><Icon name="user"/>{session.username}<span className="logout">Выйти</span></button></div>
     </aside>
     <main id="main" className="main">
       <button className="mobile-menu" aria-label="Открыть навигацию" aria-expanded={menu} onClick={()=>setMenu(!menu)}><Icon name="menu"/></button>
@@ -46,8 +52,4 @@ export default function Farm(){
       </>}
     </main>
   </div>;
-}
-function Login({onLogin,error:initialError}:{onLogin:(value:any)=>void;error:string}){
-  const [role,setRole]=useState('owner'),[password,setPassword]=useState(''),[error,setError]=useState(initialError),[busy,setBusy]=useState(false);
-  return <main className="auth"><form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{onLogin(await post('/auth/login',{role,password}));}catch(err){setError((err as Error).message);}finally{setBusy(false);}}}><div className="brand"><span className="brand-mark">⌄</span>Продуктовая ферма</div><h1>Войти в ферму</h1><p>От идеи — к проверяемому решению.</p>{error&&<Notice kind="error">{error}</Notice>}<label>Доступ<select value={role} onChange={e=>setRole(e.target.value)}><option value="owner">Владелец</option><option value="reviewer">Проверяющий · отдельное пространство</option></select></label><label>Пароль<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy}>{busy?'Подключение…':'Войти'}</button><p className="caption">Локальные пароли владельца и проверяющего находятся в настройках сервера.</p></form></main>;
 }

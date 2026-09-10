@@ -1,5 +1,6 @@
 from pathlib import Path
 from .db import connection
+from .accounts import bootstrap_accounts
 
 
 def migrate():
@@ -11,6 +12,7 @@ def migrate():
                 conn.execute(file.read_text(encoding='utf-8'))
                 conn.execute('INSERT INTO schema_migrations(name) VALUES(%s)', (file.name,))
                 print('Applied', file.name)
+        bootstrap_accounts(conn)
 
 
 if __name__ == '__main__':
