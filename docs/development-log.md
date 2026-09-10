@@ -58,3 +58,10 @@
 - Review: чистая установка завершилась с pnpm 10.34.5; существующий lockfile принят без перегенерации, SHA-256 исходной и проверочной копий совпал. Production Next.js build и TypeScript прошли. Проверка выполнена на Windows Node.js 22.21.1 в .local/qa/vercel-pnpm10, а не на Vercel; статус облачного deployment этим не подтверждается.
 - Correction: прежнее указание полагаться только на ENABLE_EXPERIMENTAL_COREPACK было недостаточным. Теперь сборка выбирает pnpm явно. Адрес 127.0.0.1:8402 в npm-логе не связан с API_URL фермы. Точная версия pnpm первого неудачного deployment отсутствует в предоставленном логе.
 - Tools: Git, PowerShell, npm/npx/pnpm, Next.js build, официальная документация Vercel; дополнительных агентов и новых внешних ручных настроек не было.
+
+## 2026-09-10 — совместимость Next.js standalone и Vercel
+
+- User review: новый лог ef42c97 подтвердил исправление pnpm, затем показал ENOENT .next/next-server.js.nft.json после onBuildComplete адаптера Vercel.
+- Plan/implementation: подтверждена известная проблема Next.js 16.3 (vercel/next.js#96646); standalone отключён только при VERCEL=1. Docker сохраняет прежнюю упаковку. Фиктивный nft-файл не создаётся, версии Next.js/React не меняются.
+- Agent review: локальная production-сборка с VERCEL=1 и TypeScript успешны, standalone/server.js отсутствует. Повтор без VERCEL успешен, standalone/server.js создан для Docker. Это проверка двух ветвей конфигурации на Windows, не выполнение облачного адаптера; результат нового Vercel deployment проверяется отдельно через GitHub status.
+- Tools: PowerShell, Git, apply_patch, pnpm, Next.js build, исходники установленного Next.js и issue в официальном репозитории; дополнительные агенты не использовались.
