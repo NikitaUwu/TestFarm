@@ -1,0 +1,108 @@
+{
+  "BudgetPolicy": {
+    "id": "default",
+    "version": 1,
+    "active_ideas": 10,
+    "concurrent_heavy_runs": 1,
+    "audio_max_seconds": 300,
+    "audio_max_bytes": 20971520,
+    "solution_variants": 3,
+    "web_searches": 15,
+    "llm_calls": 40,
+    "network_retries": 2,
+    "experiment_repetitions": 3,
+    "repair_cycles": 2,
+    "mvp_repair_cycles": 3,
+    "experiment_timeout_seconds": 600,
+    "pre_decision_seconds": 1800,
+    "mvp_build_seconds": 1800,
+    "max_output_tokens": 6000
+  },
+  "AssessmentProfile": {
+    "id": "default",
+    "version": 1,
+    "weights": {
+      "problem": 18,
+      "market": 10,
+      "trends": 7,
+      "value": 17,
+      "efficiency": 23,
+      "feasibility": 18,
+      "decision": 7
+    },
+    "scale_max": 5
+  },
+  "EvidencePolicy": {
+    "id": "default",
+    "version": 1,
+    "minimum_sources": 5,
+    "minimum_alternatives": 3,
+    "minimum_personas": 3,
+    "minimum_hypotheses": 3,
+    "minimum_sample": 5,
+    "maximum_age_days": 730
+  },
+  "EffectModel": {
+    "id": "paired-time",
+    "version": 2,
+    "method": "paired_bootstrap",
+    "confidence_level": 0.95,
+    "resamples": 10000,
+    "seed": 42,
+    "monthly_volume": 1000,
+    "coverage": 0.8
+  },
+  "ProviderProfile": {
+    "id": "groq-free",
+    "version": 7,
+    "provider": "groq",
+    "model": "openai/gpt-oss-20b",
+    "transcription_model": "whisper-large-v3-turbo",
+    "source_excerpt_total_chars": 4000,
+    "search_model": "groq/compound-mini",
+    "search_system_version": "2025-07-23"
+  },
+  "UITokens": {
+    "id": "light-yellow",
+    "version": 1,
+    "background": "#ffffff",
+    "sidebar": "#f6f7f9",
+    "text": "#191c25",
+    "muted": "#6c707b",
+    "border": "#e1e3e8",
+    "accent": "#f5d65c"
+  },
+  "RoleSet": {
+    "id": "research-team",
+    "version": 2,
+    "groups": {
+      "structure": [
+        "idea_analyst",
+        "ux_analyst"
+      ],
+      "research": [
+        "market_analyst",
+        "strategist",
+        "business_consultant",
+        "product_marketer",
+        "researcher"
+      ],
+      "calculate": [
+        "efficiency_analyst"
+      ],
+      "assess": [
+        "critic",
+        "tracker"
+      ],
+      "report": [
+        "report_editor"
+      ],
+      "orchestrate": [
+        "orchestrator"
+      ],
+      "mvp": [
+        "implementation_agent"
+      ]
+    }
+  }
+}

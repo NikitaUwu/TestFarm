@@ -1,0 +1,133 @@
+name: product-farm
+x-app: &app
+  build: ./backend
+  init: true
+  restart: unless-stopped
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp:size=128m,mode=1777"]
+x-env: &env
+  FREE_MODE_ONLY: "1"
+  ACTIVE_PROVIDER: groq
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+  HF_HOME: /models/hf
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  HF_HUB_DISABLE_XET: "1"
+  CONFIG_ROOT: /app/config
+  DOCS_ROOT: /app/docs
+  DATABASE_URL: postgresql://farm:${POSTGRES_PASSWORD:?Run scripts/setup.ps1}@postgres:5432/farm
+  S3_ENDPOINT: http://storage:9000
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:?Run scripts/setup.ps1}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:?Run scripts/setup.ps1}
+  S3_BUCKET: farm
+  OWNER_PASSWORD: ${OWNER_PASSWORD:?Run scripts/setup.ps1}
+  REVIEWER_PASSWORD: ${REVIEWER_PASSWORD:?Run scripts/setup.ps1}
+  SESSION_SECRET: ${SESSION_SECRET:?Run scripts/setup.ps1}
+  RUNNER_TOKEN: ${RUNNER_TOKEN:?Run scripts/setup.ps1}
+  RUNNER_URL: http://runner:8001
+  RULES_URL: http://rules:8002
+  STT_PROVIDER: ${STT_PROVIDER:-groq}
+  STT_MODEL: ${STT_MODEL:-whisper-large-v3-turbo}
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: farm
+      POSTGRES_DB: farm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/setup.ps1}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U farm -d farm]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+  storage:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?Run scripts/setup.ps1}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?Run scripts/setup.ps1}
+    volumes: [objects:/data]
+    restart: unless-stopped
+  migrate:
+    <<: *app
+    restart: "no"
+    command: python -m farm.migrate
+    environment: *env
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    <<: *app
+    networks: [default, execution]
+    healthcheck:
+      test: [CMD, python, -c, "import httpx; httpx.get('http://127.0.0.1:8000/health',timeout=3).raise_for_status()"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    environment: *env
+    ports: [127.0.0.1:8000:8000]
+    volumes: [./docs:/app/docs:ro, ./config:/app/config:ro, speech_models:/models]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      storage: {condition: service_started}
+  worker:
+    <<: *app
+    networks: [default, execution]
+    command: python -m farm.worker
+    environment: *env
+    volumes: [./config:/app/config:ro]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      runner: {condition: service_started}
+  runner:
+    <<: *app
+    networks: [execution]
+    volumes: [runner_state:/state]
+    command: uvicorn farm.runner:app --host 0.0.0.0 --port 8001
+    environment:
+      RUNNER_TOKEN: ${RUNNER_TOKEN:?Run scripts/setup.ps1}
+      FREE_MODE_ONLY: "1"
+      ACTIVE_PROVIDER: groq
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      RULES_URL: http://rules:8002
+      HTTPS_PROXY: http://egress:8080
+      NO_PROXY: rules
+    cpus: 1.0
+    mem_limit: 768m
+    pids_limit: 64
+  rules:
+    <<: *app
+    networks: [execution]
+    command: uvicorn farm.rules:app --host 0.0.0.0 --port 8002
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 32
+  web:
+    build: ./web
+    init: true
+    environment:
+      API_URL: http://api:8000
+    ports: [127.0.0.1:3000:3000]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+  egress:
+    <<: *app
+    command: python -m farm.egress
+    networks: [execution, default]
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 32
+volumes:
+  runner_state:
+  speech_models:
+  pgdata:
+  objects:
+networks:
+  execution:
+    internal: true
+
