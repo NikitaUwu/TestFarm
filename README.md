@@ -28,6 +28,7 @@ docker compose ps
 - [Интеграции](docs/integrations.md)
 - [Расчёт и данные](docs/calculation.md)
 - [Эксплуатация](docs/operations.md)
+- [Web на Vercel](docs/vercel.md)
 - [Политика данных](docs/data-policy.md)
 - [Журнал разработки](docs/development-log.md)
 
