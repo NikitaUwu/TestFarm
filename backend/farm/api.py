@@ -263,6 +263,9 @@ def get_run(idea_id: UUID,run_id: UUID,principal=Depends(auth.actor)):
         if not run: raise HTTPException(404,'Запуск не найден')
         run['steps']=conn.execute('SELECT * FROM step_runs WHERE run_id=%s ORDER BY created_at',(run_id,)).fetchall()
         run['experiments']=conn.execute('SELECT * FROM experiment_runs WHERE run_id=%s ORDER BY created_at',(run_id,)).fetchall()
+        observations=conn.execute('SELECT o.* FROM task_observations o JOIN experiment_runs e ON e.id=o.experiment_id WHERE e.run_id=%s ORDER BY o.task_id,o.repetition',(run_id,)).fetchall()
+        for experiment in run['experiments']:
+            experiment['observations']=[row for row in observations if row['experiment_id']==experiment['id']]
         run['calculations']=conn.execute('SELECT * FROM calculation_runs WHERE run_id=%s ORDER BY version DESC',(run_id,)).fetchall()
         run['job']=conn.execute('SELECT * FROM jobs WHERE run_id=%s',(run_id,)).fetchone()
         return run
@@ -282,6 +285,12 @@ def command(idea_id: UUID,run_id: UUID,body: Command,principal=Depends(auth.muta
         if run['status'] in ('completed','cancelled'): return {'ok':True,'status':run['status']}
         if body.action in ('resume','retry'):
             if run['status'] in ('paused','error','waiting_for_data','waiting_for_user'):
+                if run['config_versions'].get('run_settings',{}).get('autonomous'):
+                    prefixes=[str(r['id'])+':' for r in conn.execute('SELECT id FROM experiment_runs WHERE run_id=%s',(run_id,))]
+                    for prefix in prefixes:
+                        try:
+                            httpx.post(os.environ['RUNNER_URL']+'/retry-errors',json={'prefix':prefix},headers={'X-Runner-Token':os.environ['RUNNER_TOKEN']},timeout=5).raise_for_status()
+                        except httpx.HTTPError: raise HTTPException(503,'Runner недоступен. Повторите продолжение после восстановления.') from None
                 conn.execute("UPDATE jobs SET status='ready',requested_action=NULL,last_error=NULL,lease_until=NULL WHERE run_id=%s",(run_id,))
                 conn.execute("UPDATE research_runs SET status='ready' WHERE id=%s",(run_id,))
                 conn.execute("UPDATE ideas SET execution_state='ready' WHERE id=%s",(idea_id,))
@@ -367,3 +376,5 @@ app.include_router(media_router)
 app.include_router(mvp_router)
 from .process_metrics import router as process_router
 app.include_router(process_router)
+from .intake import router as intake_router
+app.include_router(intake_router)

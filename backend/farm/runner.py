@@ -2,15 +2,15 @@ import hmac,os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI,Header,HTTPException,Depends
 from pydantic import BaseModel,Field
-from .runner_jobs import submit,cancel,recover,purge
-from .programs import GeneratedProgram
+from .runner_jobs import submit,cancel,recover,purge,retry_errors
+from .programs import GeneratedProgram, ProgramField
 
 @asynccontextmanager
 async def lifespan(app):
     recover()
     yield
 
-app=FastAPI(title='Product Farm Runner',version='2.0.0',lifespan=lifespan)
+app=FastAPI(title='Product Farm Runner',version='2.1.0',lifespan=lifespan)
 
 def authorize(x_runner_token: str=Header(default='')):
     expected=os.getenv('RUNNER_TOKEN','')
@@ -31,14 +31,22 @@ class ProgramInput(BaseModel):
     provider_profile: dict=Field(default_factory=dict)
     system: str=Field(default='',max_length=12000)
 
+class TrialInput(BaseModel):
+    request_id: str=Field(min_length=1,max_length=200)
+    text: str=Field(min_length=1,max_length=10000)
+    prompt: str=Field(min_length=1,max_length=4000)
+    output_fields: list[ProgramField]=Field(min_length=1,max_length=8)
+    provider_profile: dict
+    system: str=Field(max_length=12000)
+
 class CancelInput(BaseModel):
     prefix: str=Field(min_length=36,max_length=200)
 
 @app.get('/health')
-def health():return {'status':'available','version':'2.0.0','execution':'killable-process-and-js-runtime'}
+def health():return {'status':'available','version':'2.1.0','execution':'killable-process-and-js-runtime'}
 
 @app.get('/metadata')
-def metadata():return {**health(),'input_schema':RunInput.model_json_schema(),'program_schema':GeneratedProgram.model_json_schema(),
+def metadata():return {**health(),'input_schema':RunInput.model_json_schema(),'trial_schema':TrialInput.model_json_schema(),'program_schema':GeneratedProgram.model_json_schema(),
     'permissions':['groq.chat','rules.run'],'limits':{'javascript_seconds':.5,'javascript_memory_mb':32,'process_seconds':160},
     'isolation':'read-only non-root container; generated JS has no host bindings; durable idempotency; cancellable child process'}
 
@@ -48,6 +56,9 @@ def run(body:RunInput):return submit(body.model_dump())
 @app.post('/program/run',dependencies=[Depends(authorize)])
 def run_program(body:ProgramInput):return submit({**body.model_dump(),'kind':'program'})
 
+@app.post('/trial/run',dependencies=[Depends(authorize)])
+def run_trial(body:TrialInput):return submit({**body.model_dump(),'kind':'trial'})
+
 @app.post('/program/validate',dependencies=[Depends(authorize)])
 def validate_program(body:ProgramInput):return submit({**body.model_dump(),'kind':'validate_program'})
 
@@ -56,3 +67,6 @@ def cancel_run(body:CancelInput):return cancel(body.prefix)
 
 @app.post('/purge',dependencies=[Depends(authorize)])
 def purge_results(body:CancelInput):return purge(body.prefix)
+
+@app.post('/retry-errors',dependencies=[Depends(authorize)])
+def retry_results(body:CancelInput):return retry_errors(body.prefix)

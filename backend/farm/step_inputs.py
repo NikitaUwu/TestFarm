@@ -9,6 +9,12 @@ def fingerprint(value):
 
 def step_inputs(name,run,dependencies):
     config=run['config_versions']
+    if config.get('run_settings',{}).get('autonomous'):
+        return {'step_version':2,'step_id':name,'run_id':str(run['id']),
+                'idea_version':str(run['idea_version_id']),'config':config,
+                'raw_idea':run.get('submitted_idea',run['idea']),'dependencies':dependencies,
+                'dataset':str(run['dataset_version_id']) if name in ('experiments','calculation','assessment','report') else None,
+                'process_measurements':run.get('process_measurements',[]) if name=='calculation' else []}
     common={'step_version':1,'step_id':name,'dependencies':dependencies}
     if name=='research':
         return {**common,'idea':run['idea'],'prompts':config['PromptSet'],'provider':config['ProviderProfile'],

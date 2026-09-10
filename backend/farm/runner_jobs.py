@@ -42,6 +42,15 @@ def purge(prefix):
     return {'ok':True}
 
 
+def retry_errors(prefix):
+    """Retry known failures within policy; keep successes and unknown outcomes intact."""
+    with LOCK:
+        with database() as c:
+            ids=[r['id'] for r in c.execute("SELECT id FROM requests WHERE state='error'") if r['id'].startswith(prefix)]
+            c.executemany('DELETE FROM requests WHERE id=?',[(rid,) for rid in ids])
+    return {'ok':True,'reset_count':len(ids)}
+
+
 def submit(body):
     rid=body['request_id']; encoded=json.dumps(body,ensure_ascii=False,sort_keys=True)
     digest=hashlib.sha256(encoded.encode()).hexdigest(); owner=False
@@ -73,6 +82,8 @@ def submit(body):
         with database() as c: row=c.execute('SELECT * FROM requests WHERE id=?',(rid,)).fetchone()
         if row['state']=='completed':return {**json.loads(row['result'])['result'],'replayed':not owner}
         if row['state'] in ('cancelled','interrupted','error'):
-            raise HTTPException(503,'Runner: '+row['state']+'; '+(json.loads(row['result']).get('error','') if row['result'] else 'исход внешнего вызова неизвестен; автоматический повтор запрещён'))
+            failure=json.loads(row['result']) if row['result'] else {}
+            headers={'X-Farm-Retryable':'schema'} if row['state']=='error' and failure.get('error_code')=='json_validate_failed' else None
+            raise HTTPException(503,'Runner: '+row['state']+'; '+failure.get('error','исход внешнего вызова неизвестен; автоматический повтор запрещён'),headers=headers)
         time.sleep(.1)
     raise HTTPException(503,'Runner: ожидание результата превысило лимит')

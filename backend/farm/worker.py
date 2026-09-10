@@ -61,13 +61,13 @@ def tick():
                 run=context(run_id)
                 with PostgresSaver.from_conn_string(os.environ['DATABASE_URL']) as checkpointer:
                     checkpointer.setup()
-                    workflow=graph(checkpointer)
+                    workflow=graph(checkpointer,run['config_versions'])
                     options={'configurable':{'thread_id':run_id}}
                     previous=workflow.get_state(options)
-                    pending=previous.next or ('research',)
+                    pending=previous.next or (definitions(run['config_versions'])[0].id,)
                     # Completed provider work must survive a later provider outage.
                     health=(provider(run['config_versions']['ProviderProfile']).health()
-                            if any(step in ('research','experiments') for step in pending)
+                            if any(step in ('transcription','understanding','planning','research','experiments') for step in pending)
                             else {'status':'not_required','message':'Продолжение сохранённого расчёта, оценки или отчёта'})
                     with connection() as conn:
                         conn.execute('INSERT INTO integration_snapshots(id,run_id,content) VALUES(%s,%s,%s)',(uid(),run_id,Jsonb({'provider':health,'step_definitions':[d.model_dump() for d in definitions(run['config_versions'])]})))
@@ -83,7 +83,7 @@ def tick():
                     if requested and requested['requested_action']=='cancel': status,error='cancelled','Команда пользователя'
                     conn.execute('UPDATE jobs SET status=%s,last_error=%s,requested_action=NULL,lease_until=NULL,updated_at=now() WHERE run_id=%s',(status,error,run_id))
                     conn.execute('UPDATE research_runs SET status=%s,active_seconds=active_seconds+greatest(0,extract(epoch FROM (now()-attempt_started_at))),attempt_started_at=NULL,finished_at=CASE WHEN %s IN (\'completed\',\'cancelled\') THEN now() ELSE NULL END WHERE id=%s',(status,status,run_id))
-                    conn.execute("UPDATE ideas SET execution_state=%s,stage=CASE WHEN %s='completed' THEN 'decision' ELSE stage END,updated_at=now() WHERE id=(SELECT idea_id FROM research_runs WHERE id=%s) AND stage<>'archived'",(status,status,run_id))
+                    conn.execute("UPDATE ideas SET execution_state=%s,stage=CASE WHEN %s='completed' THEN 'decision' ELSE stage END,updated_at=now() WHERE id=(SELECT idea_id FROM research_runs WHERE id=%s) AND stage<>'archived' AND NOT EXISTS (SELECT 1 FROM research_runs newer JOIN research_runs current ON current.id=%s WHERE newer.idea_id=ideas.id AND newer.created_at>current.created_at)",(status,status,run_id,run_id))
         finally: lock.execute('SELECT pg_advisory_unlock(714211)')
 
 

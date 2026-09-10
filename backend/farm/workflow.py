@@ -27,8 +27,18 @@ class State(TypedDict):
 def context(run_id):
     with connection() as conn:
         run=conn.execute('SELECT r.*,v.content AS idea FROM research_runs r JOIN idea_versions v ON v.id=r.idea_version_id WHERE r.id=%s',(run_id,)).fetchone()
-        run['dataset']=conn.execute('SELECT content FROM dataset_versions WHERE id=%s',(run['dataset_version_id'],)).fetchone()['content']
+        dataset=conn.execute('SELECT content FROM dataset_versions WHERE id=%s',(run['dataset_version_id'],)).fetchone()
+        run['dataset']=dataset['content'] if dataset else {'labels':[], 'rows':[]}
         run['solutions']=conn.execute('SELECT id,content FROM solution_candidates WHERE id=ANY(%s::uuid[])',(run['solution_versions'],)).fetchall()
+        run['submitted_idea']=run['idea']
+        run['raw_idea']=run['idea']
+        if run['config_versions'].get('run_settings',{}).get('autonomous'):
+            transcript=conn.execute("SELECT result FROM step_runs WHERE run_id=%s AND step_id='transcription' AND result->>'status'='completed' ORDER BY created_at DESC LIMIT 1",(run_id,)).fetchone()
+            if transcript:
+                run['raw_idea']={**run['raw_idea'],'transcript':transcript['result']['data']['transcript']}
+                run['idea']=run['raw_idea']
+            structured=conn.execute("SELECT result FROM step_runs WHERE run_id=%s AND step_id='understanding' AND result->>'status'='completed' ORDER BY created_at DESC LIMIT 1",(run_id,)).fetchone()
+            if structured: run['idea']=structured['result']['data']['card']
         return run
 
 
@@ -37,6 +47,7 @@ def guard(run,consume_call=False):
         job=conn.execute('SELECT * FROM jobs WHERE run_id=%s',(run['id'],)).fetchone()
         current=conn.execute('SELECT * FROM research_runs WHERE id=%s FOR UPDATE',(run['id'],)).fetchone()
         if not job: raise StopRun('cancelled','Запуск удалён')
+        if current['stale']: raise StopRun('cancelled','Идея уточнена; продолжение выполняется по новой версии')
         if job['requested_action'] in ('pause','cancel'):
             raise StopRun('paused' if job['requested_action']=='pause' else 'cancelled','Команда пользователя')
         elapsed=current.get('active_seconds',0)
@@ -185,6 +196,9 @@ def experiments(run):
 
 
 def save_calculation(run,observations,assumptions=None):
+    if run['config_versions'].get('run_settings',{}).get('autonomous'):
+        from .autonomy import calculate_trials
+        return calculate_trials(run,observations,assumptions)
     from .process_metrics import measurements
     assumptions={**(assumptions or {}),'process_measurements':run['process_measurements'] if 'process_measurements' in run else measurements(run['idea_id'],run['dataset_version_id'])}
     if run['config_versions']['EffectModel']['version']<2:
@@ -219,7 +233,7 @@ def assessment(run):
 def save_report(run,material,calculation_result,assessment_result,changed_inputs=None):
     config={**run['config_versions'],'EffectModel':calculation_result['effect_model_version']}; report_id=uid()
     versions={'idea_version':str(run['idea_version_id']),'research_run_id':str(run['id']),
-        'dataset_versions':[str(run['dataset_version_id'])],'solution_versions':run['solution_versions'],
+        'dataset_versions':[str(run['dataset_version_id'])] if run['dataset_version_id'] else [],'solution_versions':run['solution_versions'],
         'integration_snapshot':None, 'effect_model_version':config['EffectModel'],
         'assessment_profile_version':config['AssessmentProfile'],'evidence_policy_version':config['EvidencePolicy'],
         'prompt_set_version':{'id':config['PromptSet']['id'],'version':config['PromptSet']['version']},
@@ -232,6 +246,11 @@ def save_report(run,material,calculation_result,assessment_result,changed_inputs
         report={'summary':material.get('summary','Нет данных'),'research':material,'assessment':assessment_result,'calculation':calculation_result,
             'versions':versions,'sections':['Резюме и решение','Рынок','Аудитории и гипотезы','Эффективность и прогноз','Риски','Эксперименты и метрики','MVP','Источники','История'],
             'mvp':{'status':'Требуется решение пользователя'},'changed_inputs':changed_inputs or {},'report_version':version}
+        if config.get('run_settings',{}).get('autonomous'):
+            report['autonomous']=True
+            report['plan']=data_for(run['id'],'planning')
+            report['understanding']=data_for(run['id'],'understanding')
+            report['mvp']['suggested_acceptance']=report['plan'].get('mvp_acceptance',[])
         conn.execute('INSERT INTO reports(id,run_id,version,content) VALUES(%s,%s,%s,%s)',(report_id,run['id'],version,Jsonb(report)))
     return {'report_id':report_id,'report':report}
 
@@ -244,14 +263,21 @@ STEPS=[('research',research,[],['market_analyst','strategist','business_consulta
        ('assessment',assessment,['research','calculation'],['critic','tracker']),('report',report,['assessment'],['report_editor'])]
 
 
+def steps_for(config):
+    if config.get('run_settings',{}).get('autonomous'):
+        from .autonomy import STEPS as autonomous_steps
+        return autonomous_steps
+    return STEPS
+
+
 def definitions(config):
     return [StepDefinition(id=name,version=1,role=roles,goal=name,trigger='dependencies_completed',
         input_schema={'type':'object','required':['run_id'],'properties':{'run_id':{'type':'string'}}}, output_schema=StepResult.model_json_schema(),
-        tools={'research':['provider.chat','https.read'],'experiments':['runner.run'],'calculation':['python.calculate'],'assessment':[],'report':[]}[name],
+        tools={'transcription':['provider.transcribe','storage.read'],'understanding':['provider.chat'],'planning':['provider.chat'],'research':['provider.chat','https.read'],'experiments':['runner.run'],'calculation':['python.calculate'],'assessment':[],'report':[]}[name],
         permissions=['read_run_inputs','write_validated_result'],dependencies=deps,entry_conditions=['input_versions_exist','budget_available'],
         completion_conditions=['schema_valid','artifacts_persisted'],validation=['pydantic','version_consistency'],timeout=config['BudgetPolicy']['experiment_timeout_seconds'],
         retries=config['BudgetPolicy']['network_retries'],call_limit=config['BudgetPolicy']['llm_calls'],token_computation_limit={'output_tokens':config['BudgetPolicy']['max_output_tokens']},
-        next_step_rules={'completed':'next','error':'retry_within_budget','missing_data':'waiting_for_data','permission_required':'waiting_for_user','cancel':'cancelled'}) for name,_,deps,roles in STEPS]
+        next_step_rules={'completed':'next','error':'retry_within_budget','missing_data':'waiting_for_data','permission_required':'waiting_for_user','cancel':'cancelled'}) for name,_,deps,roles in steps_for(config)]
 
 
 def execute_step(name,fn,state):
@@ -259,13 +285,13 @@ def execute_step(name,fn,state):
     if name=='calculation':
         from .process_metrics import measurements
         run['process_measurements']=measurements(run['idea_id'],run['dataset_version_id'])
-    deps=next(item[2] for item in STEPS if item[0]==name)
+    deps=next(item[2] for item in steps_for(run['config_versions']) if item[0]==name)
     dependencies={dep:fingerprint(data_for(run['id'],dep)) for dep in deps}
     input_hash=fingerprint(step_inputs(name,run,dependencies))
     with connection() as conn:
         prior=conn.execute("SELECT result FROM step_runs WHERE run_id=%s AND step_id=%s AND input_hash=%s AND result->>'status'='completed'",(run['id'],name,input_hash)).fetchone()
         if prior: StepResult.model_validate(prior['result']); return state
-        reusable=conn.execute("SELECT s.id,s.result FROM step_runs s JOIN research_runs r ON r.id=s.run_id WHERE r.idea_id=%s AND s.step_id=%s AND s.input_hash=%s AND s.result->>'status'='completed' ORDER BY s.created_at DESC LIMIT 1",(run['idea_id'],name,input_hash)).fetchone()
+        reusable=conn.execute("SELECT s.id,s.result FROM step_runs s JOIN research_runs r ON r.id=s.run_id WHERE r.idea_id=%s AND s.step_id=%s AND s.input_hash=%s AND s.result->>'status'='completed' ORDER BY s.created_at DESC LIMIT 1",(run['idea_id'],name,input_hash)).fetchone() if not run['config_versions'].get('run_settings',{}).get('autonomous') else None
         if reusable:
             result=StepResult.model_validate(reusable['result']).model_copy(update={'run_id':str(run['id']),'input_version':str(run['idea_version_id']),
                 'duration_ms':0,'call_count':0,'conclusion':'Переиспользован проверенный независимый результат'})
@@ -311,6 +337,10 @@ def execute_step(name,fn,state):
         conn.execute('INSERT INTO step_attempts(id,run_id,step_id,attempt,result) VALUES(%s,%s,%s,%s,%s)',(uid(),run['id'],name,attempt,Jsonb(result.model_dump())))
         conn.execute('INSERT INTO step_runs(id,run_id,step_id,input_hash,result,attempt) VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT(run_id,step_id,input_hash) DO UPDATE SET result=EXCLUDED.result,attempt=EXCLUDED.attempt',
             (uid(),run['id'],name,input_hash,Jsonb(result.model_dump()),attempt))
+        if name=='understanding' and not stopped:
+            # Derived display title; submitted IdeaVersion and its source words stay immutable.
+            conn.execute('UPDATE ideas SET title=%s WHERE id=%s AND current_version=(SELECT version FROM idea_versions WHERE id=%s)',
+                         (result_data['card']['title'],run['idea_id'],run['idea_version_id']))
     if stopped:
         if isinstance(stopped,ValidationError) and previous_failures<repair_limit:
             return execute_step(name,fn,state)
@@ -318,7 +348,9 @@ def execute_step(name,fn,state):
     from .agent_contract import record
     common={'run_id':run['id'],'input_version':run['idea_version_id'],'source_step':name}
     inputs={'dependency_hashes':dependencies,'input_hash':input_hash}
-    if name=='experiments': record(run['idea_id'],'orchestrator',inputs,{'plan':[s[0] for s in STEPS],
+    if name=='understanding': record(run['idea_id'],'idea_analyst',inputs,result_data,**common)
+    if name=='planning': record(run['idea_id'],'orchestrator',inputs,result_data,**common)
+    if name=='experiments': record(run['idea_id'],'orchestrator',inputs,{'plan':[s[0] for s in steps_for(run['config_versions'])],
         'budget':run['config_versions']['BudgetPolicy'],'observations':len(result_data['observations'])},**common)
     if name=='calculation': record(run['idea_id'],'efficiency_analyst',inputs,result_data,**common)
     if name=='assessment':
@@ -331,11 +363,12 @@ def execute_step(name,fn,state):
     return state
 
 
-def graph(checkpointer):
+def graph(checkpointer,config=None):
+    steps=steps_for(config or {})
     builder=StateGraph(State)
-    for name,fn,_,_ in STEPS:
+    for name,fn,_,_ in steps:
         builder.add_node(name,lambda state,n=name,f=fn:execute_step(n,f,state))
-    names=[START]+[s[0] for s in STEPS]+[END]
+    names=[START]+[s[0] for s in steps]+[END]
     for first,second in zip(names,names[1:]): builder.add_edge(first,second)
     return builder.compile(checkpointer=checkpointer)
 

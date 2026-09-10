@@ -6,9 +6,10 @@ import httpx
 
 
 class ProviderError(RuntimeError):
-    def __init__(self, message, status='unavailable'):
+    def __init__(self, message, status='unavailable', code=None):
         super().__init__(message)
         self.status = status
+        self.code = code
 
 
 class ProviderAdapter(Protocol):

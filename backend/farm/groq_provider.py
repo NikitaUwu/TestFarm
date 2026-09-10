@@ -47,10 +47,15 @@ class GroqAdapter:
                             time.sleep(delay + .1)
                             continue
                     if response.is_error:
+                        code=None
+                        try:
+                            if response.status_code==400 and response.json().get('error',{}).get('code')=='json_validate_failed':
+                                code='json_validate_failed'
+                        except (ValueError,AttributeError): pass
                         reason = {400: 'параметры или схема запроса отклонены', 401: 'недействительный ключ',
                                   402: 'доступ Free plan исчерпан', 403: 'доступ запрещён', 413: 'слишком большой запрос',
                                   429: 'лимит Free plan; повторите позже', 503: 'сервис недоступен'}.get(response.status_code, 'ошибка сервиса')
-                        raise ProviderError(f'Groq: HTTP {response.status_code} — {reason}', 'error')
+                        raise ProviderError(f'Groq: HTTP {response.status_code} — {reason}', 'error',code)
                     return response.json()
         except httpx.HTTPError as exc:
             raise ProviderError('Groq: сетевая ошибка ' + type(exc).__name__) from None

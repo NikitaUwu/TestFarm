@@ -104,5 +104,18 @@
         "implementation_agent"
       ]
     }
+  },
+  "AutonomyPolicy": {
+    "id": "idea-first",
+    "version": 1,
+    "trial_variants": 2,
+    "trial_cases": 2,
+    "thresholds": {
+      "minimum_effect_seconds": 1,
+      "minimum_quality": 0.9,
+      "maximum_manual_review": 0.2,
+      "maximum_error": 0.1
+    },
+    "scope": "Text input and typed outputs. Synthetic cases test mechanics only; no external writes."
   }
 }
