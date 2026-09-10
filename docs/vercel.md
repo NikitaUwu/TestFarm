@@ -31,7 +31,17 @@ web/vercel.json явно запускает pnpm 10.34.5 через npx и ус�
 
 Deployment ef42c97 успешно установил зависимости, скомпилировал приложение и проверил TypeScript, но завершился ENOENT для .next/next-server.js.nft.json на onBuildComplete Vercel. Это известная несовместимость output=standalone с адаптером Next.js 16.3 ([issue #96646](https://github.com/vercel/next.js/issues/96646)). next.config.ts теперь отключает standalone при VERCEL=1, который устанавливает платформа; для локального Docker standalone сохранён. Пустой файл трассировки не создаётся, зависимости не понижаются. Предупреждение о выборе Node.js 22 вместо 24 не является причиной сбоя.
 
-## Ограничения
+## Диагностика связи с API
+
+Успешный deployment проверяет сборку Web, но не доступность туннеля. Проверяйте последовательно локальный `http://localhost:8000/health`, публичный `https://<текущий-туннель>/health`, затем `/api/health` на используемом сайте Vercel. Успех — HTTP 200 с JSON `status=available`; HTML страницы входа Vercel не доказывает доступность API.
+
+Работающий процесс cloudflared не означает готовность туннеля. Его локальный metrics endpoint `/ready` должен вернуть 200 и readyConnections>0; `/quicktunnel` возвращает текущий hostname ([реализация Cloudflare](https://github.com/cloudflare/cloudflared/blob/master/metrics/metrics.go)). При восстановлении 2026-09-10 новый туннель запущен с HTTP/2 и metrics на 127.0.0.1:20242; исходный процесс имел 767 ошибок регистрации и readyConnections=0. Процесс нового туннеля должен оставаться запущенным вместе с ноутбуком и Docker.
+
+После создания нового Quick Tunnel замените API_URL в нужных окружениях Vercel и выполните Redeploy: изменения переменной не применяются к уже существующему deployment ([документация Vercel](https://vercel.com/docs/environment-variables/managing-environment-variables)). Не сохраняйте временный hostname в исходном коде как постоянную конфигурацию. Для стабильного адреса потребуется отдельно настроенный именованный туннель/домен либо постоянный внешний backend.
+
+Proxy теперь различает API_URL_MISSING и сетевой отказ. Сетевой отказ сообщает о недоступности API/туннеля, а не утверждает, что PostgreSQL остановлен. В Vercel runtime logs записывается только безопасный код сетевой ошибки и HTTP-метод, без пароля, cookie, тела запроса или значения API_URL. В Vercel отсутствие API_URL больше не подменяется localhost.
+
+## Ограничения публикации
 
 После перехода на регистрацию (2026-09-10) backend нужно обновить вместе с Web: `docker compose build api migrate web` и `docker compose up -d api web`. Миграция 008 сохраняет прежние данные, вводит логины admin/demo для исходных аккаунтов и создаёт таблицу новых аккаунтов. API_URL остаётся прежним, дополнительные секреты для регистрации в Vercel не нужны. Регистрация и вход выполняются сервером через существующий Next.js proxy.
 

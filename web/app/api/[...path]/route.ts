@@ -3,7 +3,11 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]}>}){
   const {path}=await params;
-  const base=process.env.API_URL || 'http://127.0.0.1:8000';
+  const base=(process.env.API_URL || (process.env.VERCEL==='1'?'':'http://127.0.0.1:8000')).trim().replace(/\/+$/,'');
+  if(!base){
+    console.error('[api.proxy]',{code:'API_URL_MISSING'});
+    return Response.json({detail:'Адрес API не настроен. Укажите API_URL в Vercel и выполните Redeploy.',code:'API_URL_MISSING'},{status:503});
+  }
   const url=base+'/'+path.map(encodeURIComponent).join('/')+request.nextUrl.search;
   const headers=new Headers();
   for(const name of ['content-type','cookie','x-farm-request']){const value=request.headers.get(name);if(value) headers.set(name,value);}
@@ -15,6 +19,13 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
     for(const name of ['content-type','set-cookie','content-disposition']){const value=response.headers.get(name);if(value) out.set(name,value);}
     out.set('cache-control','no-store');out.set('x-content-type-options','nosniff');
     return new Response(response.body,{status:response.status,headers:out});
-  }catch{return Response.json({detail:'Сервер недоступен. Проверьте запуск API и PostgreSQL.'},{status:503});}
+  }catch(error){
+    const cause=(error as {cause?:{code?:string}})?.cause?.code;
+    const knownCodes=['ENOTFOUND','EAI_AGAIN','ECONNREFUSED','ECONNRESET','ETIMEDOUT','UND_ERR_CONNECT_TIMEOUT'];
+    const code=cause&&knownCodes.includes(cause)?cause:'API_UNREACHABLE';
+    // Never log request bodies, credentials, cookies or the configured URL.
+    console.error('[api.proxy]',{code,method:request.method});
+    return Response.json({detail:'Не удалось подключиться к API. Проверьте API_URL и доступность Cloudflare-туннеля.',code},{status:503});
+  }
 }
 export {proxy as GET,proxy as POST,proxy as PUT,proxy as DELETE};
