@@ -30,13 +30,17 @@ export async function observed<T>(runId:string,actor:string,action:string,provid
  }
 }
 export async function ask<T extends z.ZodType>(runId:string,config:Configuration,role:string,instruction:string,input:unknown,schema:T,budget:'llm'|'mvp'='llm'):Promise<z.infer<T>>{
- for(let retry=0;;retry++){
-  await consume(runId,budget,config);
-  try{return await observed(runId,role,'llm_call','tsarrouter',input,async()=>{
-   const response=await new TsarRouterClient(config).chat(boundary+'\n'+instruction,input,schemaFor(schema));
-   const value=schema.parse(response.output);return {...response,output:value};
+  let repair='';
+  for(let retry=0;;retry++){
+   await consume(runId,budget,config);
+   try{return await observed(runId,role,'llm_call','tsarrouter',input,async()=>{
+    const response=await new TsarRouterClient(config).chat(boundary+'\n'+instruction+repair,input,schemaFor(schema));
+    const value=schema.parse(response.output);return {...response,output:value};
   },retry).then(r=>r.output);}catch(error){
-   if(retry>=config.budget.retries||!(error instanceof z.ZodError||(error instanceof IntegrationError&&error.retryable)))throw error;
+    if(error instanceof z.ZodError){
+     repair='\nПредыдущий JSON не прошёл проверку. Повтори ответ строго по схеме, не добавляй пояснений. Исправь поля: '+error.issues.slice(0,8).map(issue=>`${issue.path.join('.')||'<root>'}: ${issue.message}`).join('; ');
+    }
+    if(retry>=config.budget.retries||!(error instanceof z.ZodError||(error instanceof IntegrationError&&error.retryable)))throw error;
   }
  }
-}
+ }
