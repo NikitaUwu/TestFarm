@@ -32,7 +32,7 @@ export class TsarRouterClient implements LLMProvider,SpeechProvider{
  }
  async chat(system:string,data:unknown,schema:Record<string,unknown>){
   const {model,channel}=await this.ensureFree('text');
-  const response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY'),'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,provider:{only:[channel],allow_fallbacks:false,max_price:{prompt:0,completion:0}},stream:false,max_completion_tokens:this.config.budget.maxTokens,temperature:0.2,messages:[{role:'system',content:system+'\nСхема JSON результата: '+JSON.stringify(schema)},{role:'user',content:JSON.stringify({untrusted_data:data})}],response_format:{type:'json_object'}})});
+  const response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY'),'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,provider:{only:[channel],allow_fallbacks:false},stream:false,max_tokens:this.config.budget.maxTokens,temperature:0.2,messages:[{role:'system',content:system+'\nСхема JSON результата: '+JSON.stringify(schema)},{role:'user',content:JSON.stringify({untrusted_data:data})}],response_format:{type:'json_object'}})});
   const result=await boundedJson(response);const choice=result.choices?.[0];
   if(choice?.finish_reason!=='stop')throw new IntegrationError('Царь Роутер','Ответ не завершён',true);
   if(Number(result.usage?.cost_rub??response.headers.get('X-Cost-Rub')??0)>0)throw new IntegrationError('Царь Роутер','Нарушена политика бесплатного канала');
