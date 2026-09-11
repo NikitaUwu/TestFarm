@@ -4,15 +4,23 @@ export class IntegrationError extends Error{constructor(public service:string,pu
 export interface LLMProvider {chat(system:string,data:unknown,schema:Record<string,unknown>):Promise<{output:unknown;usage:Record<string,any>;model:string;channel:string|null}>;}
 export interface SpeechProvider {transcribe(audio:Blob,filename:string):Promise<{text:string;usage:Record<string,any>}>;}
 export async function boundedJson(response:Response,limit=1048576){
- if(!response.ok)throw new IntegrationError(new URL(response.url).hostname,`HTTP ${response.status}`,[429,502,503,504].includes(response.status));
  if(!response.body)throw new IntegrationError('HTTP','Пустой ответ');
  const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
  while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new IntegrationError('HTTP','Ответ превышает лимит');}chunks.push(value);}
- try{return JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new IntegrationError('HTTP','Некорректный JSON');}
+ const text=Buffer.concat(chunks).toString('utf8');
+ if(!response.ok){
+  let detail='';
+  try{
+   const payload=JSON.parse(text);
+   detail=String(payload.error?.message||payload.error||payload.message||'').slice(0,300);
+  }catch{detail=text.trim().slice(0,300);}
+  throw new IntegrationError(new URL(response.url).hostname,`HTTP ${response.status}${detail?`: ${detail}`:''}`,[429,502,503,504].includes(response.status));
+ }
+ try{return JSON.parse(text);}catch{throw new IntegrationError('HTTP','Некорректный JSON');}
 }
 export class TsarRouterClient implements LLMProvider,SpeechProvider{
  constructor(private config:Configuration){}
- async catalogue(){return boundedJson(await fetch(this.config.provider.baseUrl+'/models/info',{signal:AbortSignal.timeout(15000),cache:'no-store'}),2097152);}
+ async catalogue(){return boundedJson(await fetch(this.config.provider.baseUrl+'/models/info',{headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY')},signal:AbortSignal.timeout(15000),cache:'no-store'}),2097152);}
  async ensureFree(kind:'text'|'stt'){
   const p=this.config.provider,model=kind==='text'?p.model:p.speechModel,channel=kind==='text'?p.channel:p.speechChannel;
   const catalogue=await this.catalogue();const entry=catalogue.data?.find((m:any)=>m.id===model&&m.type===kind);
@@ -24,7 +32,7 @@ export class TsarRouterClient implements LLMProvider,SpeechProvider{
  }
  async chat(system:string,data:unknown,schema:Record<string,unknown>){
   const {model,channel}=await this.ensureFree('text');
-  const response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY'),'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,provider:{only:[channel],allow_fallbacks:false,max_price:{prompt:0,completion:0}},stream:false,max_tokens:this.config.budget.maxTokens,temperature:0.2,reasoning_effort:'none',messages:[{role:'system',content:system+'\nСхема JSON результата: '+JSON.stringify(schema)},{role:'user',content:JSON.stringify({untrusted_data:data})}],response_format:{type:'json_object'}})});
+  const response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY'),'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,provider:{only:[channel],allow_fallbacks:false,max_price:{prompt:0,completion:0}},stream:false,max_completion_tokens:this.config.budget.maxTokens,temperature:0.2,messages:[{role:'system',content:system+'\nСхема JSON результата: '+JSON.stringify(schema)},{role:'user',content:JSON.stringify({untrusted_data:data})}],response_format:{type:'json_object'}})});
   const result=await boundedJson(response);const choice=result.choices?.[0];
   if(choice?.finish_reason!=='stop')throw new IntegrationError('Царь Роутер','Ответ не завершён',true);
   if(Number(result.usage?.cost_rub??response.headers.get('X-Cost-Rub')??0)>0)throw new IntegrationError('Царь Роутер','Нарушена политика бесплатного канала');
