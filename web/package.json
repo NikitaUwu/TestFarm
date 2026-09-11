@@ -1,7 +1,42 @@
 {
-  "name":"product-farm-web","version":"0.1.0","private":true,"packageManager":"pnpm@10.34.5",
-  "engines":{"node":"22.x"},
-  "scripts":{"dev":"next dev --hostname 127.0.0.1","build":"next build","start":"next start --hostname 0.0.0.0","typecheck":"tsc --noEmit"},
-  "dependencies":{"next":"16.3.4","react":"19.2.8","react-dom":"19.2.8"},
-  "devDependencies":{"typescript":"5.9.3","@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0"}
+  "name": "product-farm-web",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:import-legacy": "tsx scripts/import-legacy.ts",
+    "db:export-legacy": "tsx scripts/export-legacy.ts",
+    "db:import-legacy-files": "tsx scripts/import-legacy-files.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@next/env": "16.3.4",
+    "@vercel/blob": "^2.8.0",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.3.4",
+    "pg": "^8.23.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "workflow": "^4.8.8",
+    "zod": "^4.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.13",
+    "typescript": "5.9.3"
+  }
 }

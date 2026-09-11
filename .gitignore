@@ -16,3 +16,8 @@ web/next-env.d.ts
 coverage/
 
 GrokKey.txt
+
+tsarrouterkey.txt
+tavily.txt
+.vercel/
+.workflow-data/

@@ -4,7 +4,7 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   if(options.body && !(options.body instanceof FormData)) headers.set('Content-Type','application/json');
   const response=await fetch('/api'+path,{...options,headers,credentials:'same-origin',cache:'no-store'});
   const data=await response.json();
-  if(!response.ok){const detail=typeof data.detail==='string'?data.detail:JSON.stringify(data.detail || 'Ошибка запроса');throw new ApiError(detail,response.status);}
+  if(!response.ok){const detail=typeof data.error==='string'?data.error:typeof data.detail==='string'?data.detail:JSON.stringify(data.detail || 'Ошибка запроса');throw new ApiError(detail,response.status);}
   return data;
 }
 export const post=(path:string,body:unknown={})=>api(path,{method:'POST',body:JSON.stringify(body)});

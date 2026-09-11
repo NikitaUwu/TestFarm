@@ -1,31 +1,7 @@
-import { NextRequest } from 'next/server';
+import {NextRequest} from 'next/server';
+import {farmApi} from '../../../farm/api';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
-async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]}>}){
-  const {path}=await params;
-  const base=(process.env.API_URL || (process.env.VERCEL==='1'?'':'http://127.0.0.1:8000')).trim().replace(/\/+$/,'');
-  if(!base){
-    console.error('[api.proxy]',{code:'API_URL_MISSING'});
-    return Response.json({detail:'Адрес API не настроен. Укажите API_URL в Vercel и выполните Redeploy.',code:'API_URL_MISSING'},{status:503});
-  }
-  const url=base+'/'+path.map(encodeURIComponent).join('/')+request.nextUrl.search;
-  const headers=new Headers();
-  for(const name of ['content-type','cookie','x-farm-request']){const value=request.headers.get(name);if(value) headers.set(name,value);}
-  try{
-    const body=['GET','HEAD'].includes(request.method)?undefined:await request.arrayBuffer();
-    if(body && body.byteLength>22*1024*1024) return Response.json({detail:'Файл слишком большой'},{status:413});
-    const response=await fetch(url,{method:request.method,headers,body,cache:'no-store',redirect:'manual',signal:AbortSignal.timeout(180000)});
-    const out=new Headers();
-    for(const name of ['content-type','set-cookie','content-disposition']){const value=response.headers.get(name);if(value) out.set(name,value);}
-    out.set('cache-control','no-store');out.set('x-content-type-options','nosniff');
-    return new Response(response.body,{status:response.status,headers:out});
-  }catch(error){
-    const cause=(error as {cause?:{code?:string}})?.cause?.code;
-    const knownCodes=['ENOTFOUND','EAI_AGAIN','ECONNREFUSED','ECONNRESET','ETIMEDOUT','UND_ERR_CONNECT_TIMEOUT'];
-    const code=cause&&knownCodes.includes(cause)?cause:'API_UNREACHABLE';
-    // Never log request bodies, credentials, cookies or the configured URL.
-    console.error('[api.proxy]',{code,method:request.method});
-    return Response.json({detail:'Не удалось подключиться к API. Проверьте API_URL и доступность Cloudflare-туннеля.',code},{status:503});
-  }
-}
-export {proxy as GET,proxy as POST,proxy as PUT,proxy as DELETE};
+export const maxDuration=120;
+async function handle(request:NextRequest,{params}:{params:Promise<{path:string[]}>}){return farmApi(request,(await params).path);}
+export {handle as GET,handle as POST,handle as PATCH,handle as DELETE};

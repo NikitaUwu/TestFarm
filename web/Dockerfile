@@ -8,8 +8,7 @@ RUN pnpm run build
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app ./
 USER node
 EXPOSE 3000
-CMD ["node","server.js"]
+CMD ["node","node_modules/next/dist/bin/next","start","--hostname","0.0.0.0"]

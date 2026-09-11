@@ -1,0 +1,10 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {api} from '../lib/api';
+export default function MvpRenderer({id}:{id:string}){
+ const [mvp,setMvp]=useState<any>(null),[input,setInput]=useState<Record<string,unknown>>({}),[output,setOutput]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{let live=true;const load=()=>api('/mvp/'+id).then(value=>{if(live)setMvp(value);}).catch(e=>{if(live)setError(e.message);});load();const timer=setInterval(load,3000);return()=>{live=false;clearInterval(timer);};},[id]);
+ return <main className="public-report"><a href="/">← К идеям</a>{error&&<p role="alert">{error}</p>}<h1>{mvp?.spec?.title||'Подготовка MVP'}</h1>{mvp?.status!=='ready'?<p>Состояние: {mvp?.status||'Загрузка…'}</p>:<><p>{mvp.spec.description}</p><form onSubmit={async event=>{event.preventDefault();setBusy(true);setError('');try{setOutput(await api('/mvp/'+id+'/run',{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(input)}));}catch(e){setError((e as Error).message);}finally{setBusy(false);}}}>
+ {mvp.spec.inputFields.map((field:any)=><label key={field.name}>{field.label}{field.type==='boolean'?<select required value={String(input[field.name]??'')} onChange={e=>setInput({...input,[field.name]:e.target.value==='true'})}><option value="">Выберите</option><option value="true">Да</option><option value="false">Нет</option></select>:<input required type={field.type==='number'?'number':'text'} step="any" maxLength={16000} value={String(input[field.name]??'')} onChange={e=>setInput({...input,[field.name]:field.type==='number'?Number(e.target.value):e.target.value})}/>}</label>)}<button disabled={busy} className="primary">{busy?'Выполнение…':'Выполнить'}</button></form>
+ {output&&<section><h2>Результат</h2>{output.status==='completed'?<dl>{mvp.spec.outputFields.map((field:any)=><div key={field.name}><dt>{field.label}</dt><dd>{String(output.content.output[field.name])}</dd></div>)}</dl>:<p>{output.status}</p>}</section>}</>}</main>;
+}
