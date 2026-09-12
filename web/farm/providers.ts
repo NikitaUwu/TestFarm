@@ -31,11 +31,14 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
   let response:Response;
   try{response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,stream:false,max_tokens:this.config.budget.maxTokens,temperature:0.2,messages:[{role:'system',content:system},{role:'user',content:input}],...extra})});}
   catch{throw new IntegrationError('RouterAI','Сетевой запрос не завершён',true);}
-  const result=await boundedJson(response,this.config.web.maxBytes),usage=result.usage||{},message=result.choices?.[0]?.message;
+  const result=await boundedJson(response,this.config.web.maxBytes),usage=result.usage||{},choice=result.choices?.[0],message=choice?.message;
   if(result.model&&result.model!==model)throw new IntegrationError('RouterAI','Незапрошенная замена модели отклонена',false,usage,result.model);
   if(message?.refusal)throw new IntegrationError('RouterAI','Модель отказалась от запроса',false,usage,model);
-  if(!message?.content||result.choices[0].finish_reason==='length')throw new IntegrationError('RouterAI','Ответ пуст или обрезан',true,usage,model);
-  return {message,usage,model,generationId:response.headers.get('X-Generation-Id')||result.id||null};
+  const content=typeof message?.content==='string'?message.content.trim():(typeof choice?.text==='string'?choice.text.trim():'');
+  if(choice?.finish_reason==='length')throw new IntegrationError('RouterAI','Ответ превысил лимит токенов (обрезан)',true,usage,model);
+  if(!content&&!Array.isArray(message?.annotations)&&!Array.isArray(choice?.annotations))throw new IntegrationError('RouterAI','Ответ модели пуст',true,usage,model);
+  const normalizedMessage={...message,content:content||(typeof message?.content==='string'?message.content:'')};
+  return {message:normalizedMessage,usage,model,generationId:response.headers.get('X-Generation-Id')||result.id||null};
  }
  async chat(system:string,data:unknown,schema:Record<string,unknown>,role=''){
   const result=await this.completion(system,data,this.modelFor(role),{response_format:{type:'json_schema',json_schema:{name:'farm_step',strict:true,schema}}});

@@ -28,7 +28,7 @@
     "llmCalls": 40,
     "searchCalls": 8,
     "retries": 2,
-    "maxTokens": 4500,
+    "maxTokens": 8192,
     "researchMinutes": 30,
     "trialCases": 2,
     "trialRepetitions": 3,
