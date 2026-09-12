@@ -1019,8 +1019,8 @@ h1, h2, h3, h4, p {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 14px;
-  margin: 12px 0 24px;
-  padding: 14px 18px;
+  margin: 10px 0 16px;
+  padding: 12px 16px;
   background: var(--surface-subtle);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -2028,56 +2028,69 @@ h1, h2, h3, h4, p {
 }
 
 /* --------------------------------------------------------------------------
-   Idea Parameters Card & Priority Chips
+   Idea Parameters Card & Priority Chips (Compact secondary settings)
    -------------------------------------------------------------------------- */
 .farm-params-card {
-  background: linear-gradient(135deg, rgba(245, 214, 92, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%);
-  border: 1px solid #ebd054;
-  border-radius: var(--radius-lg);
-  padding: 22px;
-  margin-bottom: 22px;
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, rgba(245, 214, 92, 0.05) 0%, rgba(255, 255, 255, 0.95) 100%);
+  border: 1px solid rgba(235, 208, 84, 0.65);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 0 0 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .farm-params-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .farm-params-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: var(--accent);
   color: #1a1a1a;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 6px rgba(245, 214, 92, 0.35);
+  box-shadow: 0 1px 3px rgba(245, 214, 92, 0.35);
+  flex-shrink: 0;
 }
 
 .farm-params-header strong {
-  font-size: 15px;
-  font-weight: 700;
-  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  display: inline-block;
   color: var(--text);
+  line-height: 1.2;
 }
 
 .farm-params-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
+  margin-left: 6px;
 }
 
 .farm-params-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.farm-input-compact {
+  height: 38px;
+  font-size: 13px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
 }
 
 .farm-input-lg {
-  height: 46px;
-  font-size: 15px;
+  height: 42px;
+  font-size: 14px;
   background: #fff;
   border: 1px solid var(--border);
 }
@@ -2085,19 +2098,18 @@ h1, h2, h3, h4, p {
 .farm-priority-picker {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .farm-priority-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
 }
 
 .farm-priority-chips {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 6px;
 }
 
 .farm-priority-chip {
@@ -2105,14 +2117,14 @@ h1, h2, h3, h4, p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 5px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: #fff;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 550;
   color: var(--text-muted);
 }

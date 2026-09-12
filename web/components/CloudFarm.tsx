@@ -396,15 +396,53 @@ export default function CloudFarm(){
                 await refresh();
               });
             }}>
-              {/* Блок явных параметров идеи (Название и Приоритет) */}
-              <div className="farm-params-card">
+              {/* Поле ввода сути идеи — сразу доступно без прокрутки */}
+              <div className="farm-field-group">
+                <label className="farm-label">
+                  <span>Суть идеи и сценарий</span>
+                  <textarea
+                    rows={4}
+                    required
+                    maxLength={20000}
+                    value={text}
+                    onChange={e=>setText(e.target.value)}
+                    placeholder="Какую проблему решает продукт? Кто пользователь и как эта задача закрывается сегодня? Опишите сценарий в свободной форме или надиктуйте голосом…"
+                    className="farm-textarea"
+                  />
+                </label>
+              </div>
+
+              {/* Панель голосового ввода (микрофон + файл) сразу под полем ввода */}
+              <div className="farm-voice-section">
+                <div className="farm-voice-tools">
+                  <VoiceRecorder
+                    onRecordingComplete={handleVoiceComplete}
+                    disabled={busy}
+                  />
+                  <label className="ui-btn ui-btn-subtle file-upload-btn">
+                    <Icon name="upload" size={16}/>
+                    <span>Загрузить аудиофайл</span>
+                    <input
+                      type="file"
+                      accept="audio/webm,audio/wav,audio/mp4,audio/mpeg"
+                      disabled={busy}
+                      onChange={handleFileUpload}
+                      style={{display:'none'}}
+                    />
+                  </label>
+                </div>
+                {audioCost&&<span className="farm-audio-status"><Icon name="checkCircle" size={14}/> {audioCost}</span>}
+              </div>
+
+              {/* Компактный блок параметров (Название и Приоритет) */}
+              <div className="farm-params-card farm-params-card-compact">
                 <div className="farm-params-header">
                   <div className="farm-params-icon">
-                    <Icon name="settings" size={18}/>
+                    <Icon name="settings" size={15}/>
                   </div>
                   <div>
-                    <strong>Параметры идеи</strong>
-                    <span className="farm-params-sub">Название и приоритетность исследования в очереди</span>
+                    <strong>Название и приоритет</strong>
+                    <span className="farm-params-sub">Уточните заголовок для карточки и позицию в очереди</span>
                   </div>
                 </div>
 
@@ -416,10 +454,9 @@ export default function CloudFarm(){
                       maxLength={180}
                       value={title}
                       onChange={e=>setTitle(e.target.value)}
-                      placeholder="Например: ИИ-помощник службы поддержки"
-                      className="farm-input farm-input-lg"
+                      placeholder="Краткое название (или создастся по тексту)"
+                      className="farm-input farm-input-compact"
                     />
-                    <span className="farm-field-hint">Понятное краткое название для карточки</span>
                   </label>
 
                   <div className="farm-priority-picker">
@@ -443,46 +480,8 @@ export default function CloudFarm(){
                         );
                       })}
                     </div>
-                    <span className="farm-field-hint">Влияет на очерёдность взятия идеи в обработку</span>
                   </div>
                 </div>
-              </div>
-
-              <div className="farm-field-group">
-                <label className="farm-label">
-                  <span>Суть идеи и сценарий</span>
-                  <textarea
-                    rows={5}
-                    required
-                    maxLength={20000}
-                    value={text}
-                    onChange={e=>setText(e.target.value)}
-                    placeholder="Какую проблему решает продукт? Кто пользователь и как эта задача закрывается сегодня? Опишите сценарий в свободной форме…"
-                    className="farm-textarea"
-                  />
-                </label>
-              </div>
-
-              {/* Панель голосового ввода (микрофон + файл) */}
-              <div className="farm-voice-section">
-                <div className="farm-voice-tools">
-                  <VoiceRecorder
-                    onRecordingComplete={handleVoiceComplete}
-                    disabled={busy}
-                  />
-                  <label className="ui-btn ui-btn-subtle file-upload-btn">
-                    <Icon name="upload" size={16}/>
-                    <span>Загрузить аудиофайл</span>
-                    <input
-                      type="file"
-                      accept="audio/webm,audio/wav,audio/mp4,audio/mpeg"
-                      disabled={busy}
-                      onChange={handleFileUpload}
-                      style={{display:'none'}}
-                    />
-                  </label>
-                </div>
-                {audioCost&&<span className="farm-audio-status"><Icon name="checkCircle" size={14}/> {audioCost}</span>}
               </div>
 
               <div className="farm-form-actions">
