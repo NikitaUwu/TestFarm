@@ -19,6 +19,8 @@ import {
   NumberValue,
 } from './UI';
 import { PitchCardModal } from './PitchCardModal';
+import { LiveIntelStream } from './LiveIntelStream';
+import { WhatIfSandbox } from './WhatIfSandbox';
 
 const STAGE_LABELS:Record<string,string>={
   draft:'Черновик',
@@ -582,6 +584,11 @@ export default function CloudFarm(){
                 })}
               </div>
 
+              {/* Стрим активного ожидания ИИ-исследования */}
+              {['queued','starting','running'].includes(run.status)&&(
+                <LiveIntelStream run={run} currentStepInfo={currentStepInfo} />
+              )}
+
               {/* Кнопки управления процессом */}
               {['queued','starting','running'].includes(run.status)&&(
                 <div className="farm-run-actions">
@@ -854,6 +861,9 @@ export function CloudReport({
             );
           })}
         </div>
+
+        {/* What-If Sandbox: Интерактивный симулятор экономики */}
+        <WhatIfSandbox calculation={report.calculation} />
 
         {/* Сводная таблица вариантов */}
         <div className="report-table-card">

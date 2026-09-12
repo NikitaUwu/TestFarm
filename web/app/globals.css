@@ -3403,3 +3403,441 @@ h1, h2, h3, h4, p {
     width: 100%;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Live Intel Stream (Active Waiting Component)
+   -------------------------------------------------------------------------- */
+.live-intel-container {
+  margin: 18px 0;
+  background: linear-gradient(145deg, #131822 0%, #1c2436 100%);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  border: 1px solid rgba(245, 214, 92, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.live-intel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.live-intel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(245, 214, 92, 0.15);
+  border: 1px solid rgba(245, 214, 92, 0.5);
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.live-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseLive 1.5s infinite;
+}
+
+@keyframes pulseLive {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.live-badge-text {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+}
+
+.live-intel-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.live-intel-meta strong {
+  color: #fff;
+}
+
+.live-intel-cost {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.live-intel-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.live-intel-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.live-agent-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #1a1a1a;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(245, 214, 92, 0.4);
+  flex-shrink: 0;
+}
+
+.live-agent-role {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.live-agent-headline {
+  margin: 1px 0 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: #fff;
+}
+
+.live-intel-stream-box {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+
+.live-thoughts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-thought-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.live-thought-chevron {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.live-intel-history {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.live-history-title {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.live-history-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.live-history-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.live-chip-check {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.live-chip-actor {
+  font-weight: 600;
+}
+
+.live-chip-time {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   What-If Sandbox (Unit-Economics Simulator)
+   -------------------------------------------------------------------------- */
+.whatif-sandbox-card {
+  background: linear-gradient(145deg, #ffffff 0%, #fafaf9 100%);
+  border: 1px solid #ebd054;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin: 28px 0;
+  box-shadow: var(--shadow-md);
+}
+
+.whatif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 16px;
+}
+
+.whatif-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.whatif-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #1a1a1a;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(245, 214, 92, 0.4);
+  flex-shrink: 0;
+}
+
+.whatif-title-row h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+
+.whatif-title-row p {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.whatif-badge {
+  background: rgba(245, 214, 92, 0.15);
+  border: 1px solid #ebd054;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #854d0e;
+}
+
+.whatif-body-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.whatif-sliders-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--surface-subtle);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.whatif-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.whatif-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.whatif-slider-label strong {
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.whatif-range-input {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.whatif-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.whatif-range-input::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.whatif-slider-hints {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.whatif-metrics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.whatif-hero-stat {
+  background: linear-gradient(135deg, #131822 0%, #1e2638 100%);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  border: 1px solid rgba(245, 214, 92, 0.35);
+  box-shadow: var(--shadow-sm);
+}
+
+.whatif-hero-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.whatif-hero-num {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.whatif-hero-sub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 4px;
+  display: block;
+}
+
+.whatif-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.whatif-mini-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.whatif-mini-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.whatif-mini-card strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.whatif-mini-card small {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.whatif-verdict-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.whatif-verdict-callout.high {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.whatif-verdict-callout.moderate {
+  background: #fffbeb;
+  border: 1px solid #fef08a;
+  color: #92400e;
+}
+
+.whatif-verdict-callout.low {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.whatif-verdict-callout p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .whatif-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
