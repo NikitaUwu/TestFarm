@@ -45,13 +45,21 @@ export async function farmApi(request:NextRequest,path:string[]){
    await rate('audio:'+user.id,5,3600);
    if(Number(request.headers.get('content-length')||0)>configuration().budget.audioBytes+65536)throw new ApiError(413,'Аудиофайл слишком большой');
    const form=await request.formData(),file=form.get('file');if(!(file instanceof File))throw new ApiError(400,'Добавьте аудиофайл');
-   const artifactId=await storeAudio(user.id,file);
+   let artifactId:string;
+   try{
+    artifactId=await storeAudio(user.id,file);
+   }catch(err:any){
+    if(err instanceof ApiError)throw err;
+    const msg=String(err?.message||'');
+    if(msg.includes('BLOB_READ_WRITE_TOKEN'))throw new ApiError(503,'Хранилище аудиофайлов не настроено на сервере');
+    throw new ApiError(500,`Не удалось сохранить аудиозапись: ${msg||'ошибка хранилища'}`);
+   }
    try{
     const config=configuration(),audio=await readAudio(artifactId,user.id);let speech;
     for(let retry=0;;retry++){try{speech=await observed(null,'speech','transcribe','routerai',{artifactId,ownerId:user.id},()=>new RouterAIClient(config).transcribe(audio,file.name),retry);break;}catch(error){if(retry>=config.budget.retries||!(error instanceof IntegrationError&&error.retryable))throw error;await new Promise(resolve=>setTimeout(resolve,config.budget.retryDelayMs*(retry+1)));}}
     return NextResponse.json({artifactId,...speech});
    }
-   catch(error){return NextResponse.json({artifactId,text:'',warning:error instanceof IntegrationError?error.message:'Расшифровка недоступна. Можно продолжить текстом.'});}
+   catch(error){return NextResponse.json({artifactId,text:'',warning:error instanceof IntegrationError?error.message:String((error as any)?.message||'Расшифровка недоступна. Можно продолжить текстом.')});}
   }
   if(path[0]==='reports'&&path[1]){
    idSchema.parse(path[1]);const [report]=await db().select().from(S.reports).where(eq(S.reports.id,path[1]));if(!report)throw new ApiError(404,'Отчёт не найден');

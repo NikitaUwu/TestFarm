@@ -117,7 +117,10 @@ export default function CloudFarm(){
     setError('');
     try{
       const form=new FormData();
-      form.set('file',new File([blob],'voice_record.webm',{type:blob.type||'audio/webm'}));
+      const rawType = (blob.type || '').split(';')[0].trim().toLowerCase();
+      const ext = rawType.includes('mp4') ? 'mp4' : rawType.includes('wav') ? 'wav' : rawType.includes('ogg') ? 'ogg' : 'webm';
+      const cleanMime = rawType || 'audio/webm';
+      form.set('file',new File([blob],`voice_record.${ext}`,{type:cleanMime}));
       const result=await api('/audio',{method:'POST',body:form});
       setAudioId(result.artifactId);
       if(result.usage?.cost!=null){
