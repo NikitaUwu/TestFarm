@@ -7,7 +7,7 @@
     "baseUrl": "https://routerai.ru/api/v1",
     "model": "qwen/qwen3.5-9b",
     "criticModel": "openai/gpt-oss-120b",
-    "speechModel": "openai/whisper-large-v3-turbo",
+    "speechModel": "microsoft/mai-transcribe-2",
     "fallbackModels": []
   },
   "web": {

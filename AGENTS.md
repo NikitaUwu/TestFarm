@@ -31,7 +31,7 @@ UI, сервер, хранение, очередь, оркестрация, ИИ
 | Очередь | Neon/PostgreSQL + атомарный Dispatcher; один тяжёлый запуск, FIFO и aging |
 | Данные | Neon PostgreSQL, @neondatabase/serverless, Drizzle ORM/Kit и SQL-миграции |
 | Файлы | Vercel Private Blob; доступ только через авторизованный сервер |
-| ИИ | RouterAI; раздельные LLMProvider и SpeechProvider. Основная модель qwen/qwen3.5-9b, только критическая оценка — openai/gpt-oss-120b, STT — openai/whisper-large-v3-turbo. Автоматических fallback/escalation нет |
+| ИИ | RouterAI; раздельные LLMProvider и SpeechProvider. Основная модель qwen/qwen3.5-9b, только критическая оценка — openai/gpt-oss-120b, STT — microsoft/mai-transcribe-2. Автоматических fallback/escalation нет |
 | Веб-инструменты | RouterAI Web Search plugin + Exa; 3 результата обычно, 5 для ключевой темы. Отдельного SearchProvider и чтения полных страниц нет |
 | Расчёты | Python Function в том же deployment, NumPy/SciPy; получение входов из Neon по calculationRunId |
 | Rules | Отдельно вызываемый HTTP-компонент в том же deployment, детерминированная валидация |

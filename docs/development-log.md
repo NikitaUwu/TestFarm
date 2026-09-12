@@ -168,6 +168,8 @@ Verification: сборка Next.js и проверка типов прошли �
 - globals.css: добавлены стили для пульсирующего live-стрима, карточек агентов, стилизованных слайдеров и финансового табло.
 - Verification: чистая проверка типов `npx tsc --noEmit` и полная production-сборка `npx next build` завершены успешно (код 0).
 
-
-
-
+### 2026-09-12: Смена модели распознавания речи (STT) на microsoft/mai-transcribe-2
+- policy.json: значение `speechModel` изменено с `openai/whisper-large-v3-turbo` на `microsoft/mai-transcribe-2`.
+- providers.ts: при транскрибации аудиозаписей через RouterAI API (`/audio/transcriptions`) теперь передаётся модель `microsoft/mai-transcribe-2`.
+- docs/page.tsx, AGENTS.md, docs/integrations.md: обновлена документация архитектуры и технический паспорт приложения.
+- Verification: чистая проверка типов `npx tsc --noEmit` и полная production-сборка `npx next build` завершены успешно (код 0).
