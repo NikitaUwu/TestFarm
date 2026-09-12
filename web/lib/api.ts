@@ -8,6 +8,7 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
   return data;
 }
 export const post=(path:string,body:unknown={})=>api(path,{method:'POST',body:JSON.stringify(body)});
+export const del=(path:string)=>api(path,{method:'DELETE'});
 export type Idea={id:string;title:string;priority:number;stage:string;execution_state:string;current_version:number;updated_at:string;content:Content};
 export type Content={title:string;transcript:string;problem:string;audience:string;value:string;current_process:string;expected_effect:string;knowledge:Record<string,string>;assumptions:string[];constraints:string[]};
 export const blank:Content={title:'',transcript:'',problem:'',audience:'',value:'',current_process:'',expected_effect:'',knowledge:{},assumptions:[],constraints:[]};
