@@ -9,12 +9,12 @@ import {configuration,origin,internalHeaders} from './config';
 import {del,get} from '@vercel/blob';
 import {dispatchNextResearchJob,reconcile as reconcileDispatcher} from './dispatcher';
 import {rulesInput,validateRules} from './rules';
-import {IntegrationError,TsarRouterClient} from './providers';
+import {IntegrationError,RouterAIClient} from './providers';
 import {storeAudio,readAudio} from './storage';
 import {randomBytes} from 'node:crypto';
 import {mvpSpec,validateFields,fieldsSchema} from './contracts';
 import {boundary} from './prompts';
-import {observed} from './execution';
+import {observed,paidCall,assertCurrentProvider} from './execution';
 
 const idSchema=z.uuid();
 const active=['queued','starting','running'];
@@ -46,7 +46,11 @@ export async function farmApi(request:NextRequest,path:string[]){
    if(Number(request.headers.get('content-length')||0)>configuration().budget.audioBytes+65536)throw new ApiError(413,'Аудиофайл слишком большой');
    const form=await request.formData(),file=form.get('file');if(!(file instanceof File))throw new ApiError(400,'Добавьте аудиофайл');
    const artifactId=await storeAudio(user.id,file);
-   try{const speech=await new TsarRouterClient(configuration()).transcribe(await readAudio(artifactId,user.id),file.name);return NextResponse.json({artifactId,...speech});}
+   try{
+    const config=configuration(),audio=await readAudio(artifactId,user.id);let speech;
+    for(let retry=0;;retry++){try{speech=await observed(null,'speech','transcribe','routerai',{artifactId,ownerId:user.id},()=>new RouterAIClient(config).transcribe(audio,file.name),retry);break;}catch(error){if(retry>=config.budget.retries||!(error instanceof IntegrationError&&error.retryable))throw error;await new Promise(resolve=>setTimeout(resolve,config.budget.retryDelayMs*(retry+1)));}}
+    return NextResponse.json({artifactId,...speech});
+   }
    catch(error){return NextResponse.json({artifactId,text:'',warning:error instanceof IntegrationError?error.message:'Расшифровка недоступна. Можно продолжить текстом.'});}
   }
   if(path[0]==='reports'&&path[1]){
@@ -82,7 +86,8 @@ export async function farmApi(request:NextRequest,path:string[]){
     const [claim]=await db().insert(S.mvpResults).values({id:crypto.randomUUID(),mvpId:mvp.id,requestKey:key,status:'running',content:{input}}).onConflictDoNothing().returning();
     if(!claim){const [prior]=await db().select().from(S.mvpResults).where(and(eq(S.mvpResults.mvpId,mvp.id),eq(S.mvpResults.requestKey,key)));return NextResponse.json(prior,{status:prior.status==='running'?202:200});}
     try{
-     const response=await observed(mvp.runId,'mvp','llm_call','tsarrouter',{mvpId:mvp.id,input},()=>new TsarRouterClient(configuration()).chat(boundary+'\n'+spec.prompt,input,fieldsSchema(spec.outputFields)));
+     const run=await ownRun(user.id,mvp.runId),config=run.config as ReturnType<typeof configuration>;assertCurrentProvider(config);
+     const response=await paidCall(mvp.runId,config,'mvp','mvp',{mvpId:mvp.id,input},()=>new RouterAIClient(config).chat(boundary+'\n'+spec.prompt,input,fieldsSchema(spec.outputFields)));
      const output=validateFields(response.output,spec.outputFields);
      if(spec.useRules){const checked=await observed(mvp.runId,'mvp','validate','rules',{output,fields:spec.outputFields},async()=>{const response=await fetch(origin()+'/api/microservices/rules/run',{method:'POST',headers:internalHeaders(),body:JSON.stringify({output,fields:spec.outputFields}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw new ApiError(503,'Rules недоступен');return response.json();});if(!checked.valid)throw new ApiError(422,'MVP не прошёл проверку результата');}
      const [completed]=await db().update(S.mvpResults).set({status:'completed',content:{input,output,usage:response.usage}}).where(eq(S.mvpResults.id,claim.id)).returning();return NextResponse.json(completed);
@@ -167,6 +172,7 @@ export async function farmApi(request:NextRequest,path:string[]){
    if(['pause','resume','retry'].includes(path[2])&&request.method==='POST'){
     await db().transaction(async tx=>{
      const [current]=await tx.select().from(S.runs).where(eq(S.runs.id,run.id)).for('update');
+     if(path[2]!=='pause')assertCurrentProvider(current.config as ReturnType<typeof configuration>);
      if(current.stale)throw new ApiError(409,'Запустите актуальную версию идеи');
      if(path[2]==='pause'){
       if(!active.includes(current.status))return;

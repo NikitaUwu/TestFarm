@@ -5,8 +5,7 @@ loadEnvConfig(process.cwd());
 const values:Record<string,string|undefined>={
  NEON_BASE:process.env.NEON_BASE||process.env.DATABASE_URL,
  BLOB_READ_WRITE_TOKEN:process.env.BLOB_READ_WRITE_TOKEN,
- TSARROUTER_API_KEY:process.env.TSARROUTER_API_KEY,
- TAVILY_API_KEY:process.env.TAVILY_API_KEY,
+ ROUTERAI_API_KEY:process.env.ROUTERAI_API_KEY,
  INTERNAL_API_TOKEN:process.env.INTERNAL_API_TOKEN,
  APP_ORIGIN:process.env.APP_ORIGIN,
 };

@@ -1,55 +1,59 @@
 import {z} from 'zod';
 import {Configuration,required} from './config';
-export class IntegrationError extends Error{constructor(public service:string,public code:string,public retryable=false){super(`${service}: ${code}`);}}
-export interface LLMProvider {chat(system:string,data:unknown,schema:Record<string,unknown>):Promise<{output:unknown;usage:Record<string,any>;model:string;channel:string|null}>;}
-export interface SpeechProvider {transcribe(audio:Blob,filename:string):Promise<{text:string;usage:Record<string,any>}>;}
-export async function boundedJson(response:Response,limit=1048576){
- if(!response.body)throw new IntegrationError('HTTP','Пустой ответ');
- const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
- while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new IntegrationError('HTTP','Ответ превышает лимит');}chunks.push(value);}
- const text=Buffer.concat(chunks).toString('utf8');
- if(!response.ok){
-  let detail='';
-  try{
-   const payload=JSON.parse(text);
-   detail=String(payload.error?.message||payload.error||payload.message||'').slice(0,300);
-  }catch{detail=text.trim().slice(0,300);}
-  throw new IntegrationError(new URL(response.url).hostname,`HTTP ${response.status}${detail?`: ${detail}`:''}`,[429,502,503,504].includes(response.status));
- }
- try{return JSON.parse(text);}catch{throw new IntegrationError('HTTP','Некорректный JSON');}
+export type Usage=Record<string,any>;
+export class IntegrationError extends Error{
+ constructor(public service:string,public code:string,public retryable=false,public usage:Usage={},public model?:string){super(`${service}: ${code}`);}
 }
-export class TsarRouterClient implements LLMProvider,SpeechProvider{
- constructor(private config:Configuration){}
- async catalogue(){return boundedJson(await fetch(this.config.provider.baseUrl+'/models/info',{headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY')},signal:AbortSignal.timeout(15000),cache:'no-store'}),2097152);}
- async ensureFree(kind:'text'|'stt'){
-  const p=this.config.provider,model=kind==='text'?p.model:p.speechModel,channel=kind==='text'?p.channel:p.speechChannel;
-  const catalogue=await this.catalogue();const entry=catalogue.data?.find((m:any)=>m.id===model&&m.type===kind);
-  const selected=entry?.providers?.find((v:any)=>v.provider===channel&&v.status==='ok');
-  const price=selected?.pricing;
-  const free=kind==='text'?price?.prompt===0&&price?.completion===0:price?.per_second===0;
-  if(!free)throw new IntegrationError('Царь Роутер','Выбранный бесплатный канал недоступен');
-  return {model,channel,entry};
+export type ChatResult={output:unknown;usage:Usage;model:string;generationId:string|null};
+export type ResearchResult={text:string;annotations:Record<string,any>[];usage:Usage;model:string;generationId:string|null};
+export interface LLMProvider{chat(system:string,data:unknown,schema:Record<string,unknown>,role?:string):Promise<ChatResult>;research(query:string,keyTopic:boolean,instruction:string):Promise<ResearchResult>;}
+export interface SpeechProvider{transcribe(audio:Blob,filename:string):Promise<{text:string;usage:Usage;model:string;generationId:string|null}>;}
+export function costRub(usage:Usage):number|null{const value=usage.cost;return (typeof value==='number'||(typeof value==='string'&&value.trim()!==''))&&Number.isFinite(Number(value))&&Number(value)>=0?Number(value):null;}
+export async function boundedJson(response:Response,limit=1048576){
+ if(!response.body)throw new IntegrationError('RouterAI','Пустой ответ');
+ const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
+ while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new IntegrationError('RouterAI','Ответ превышает лимит');}chunks.push(value);}
+ let result:any;try{result=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new IntegrationError('RouterAI',response.ok?'Некорректный JSON':`HTTP ${response.status}`,[429,500,502,503,504].includes(response.status));}
+ if(!response.ok){
+  const messages:Record<number,string>={400:'Запрос отклонён',401:'Ключ не принят',402:'Недостаточно средств',403:'Нет доступа к модели',429:'Достигнут лимит запросов'};
+  // Provider error bodies may echo credentials or private inputs; never persist them verbatim.
+  throw new IntegrationError('RouterAI',`${messages[response.status]||'Сервис недоступен'} (HTTP ${response.status})`,[429,500,502,503,504].includes(response.status),result.usage||{});
  }
- async chat(system:string,data:unknown,schema:Record<string,unknown>){
-  const {model,channel}=await this.ensureFree('text');
-  const response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY'),'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,provider:{only:[channel],allow_fallbacks:false},stream:false,max_tokens:this.config.budget.maxTokens,temperature:0.2,messages:[{role:'system',content:system+'\nСхема JSON результата: '+JSON.stringify(schema)},{role:'user',content:JSON.stringify({untrusted_data:data})}],response_format:{type:'json_object'}})});
-  const result=await boundedJson(response);const choice=result.choices?.[0];
-  if(!choice?.message?.content)throw new IntegrationError('Царь Роутер','Пустой ответ',true);
-  if(Number(result.usage?.cost_rub??response.headers.get('X-Cost-Rub')??0)>0)throw new IntegrationError('Царь Роутер','Нарушена политика бесплатного канала');
-  let output;try{output=JSON.parse(choice.message.content);}catch{throw new IntegrationError('Царь Роутер',choice.finish_reason==='length'?'Ответ обрезан до завершения JSON':'Невалидный JSON',true);}
-  return {output,usage:result.usage||{},model:result.model||model,channel:response.headers.get('X-TsarRouter-Provider')};
+ return result;
+}
+export class RouterAIClient implements LLMProvider,SpeechProvider{
+ constructor(private config:Configuration){}
+ modelFor(role=''){return role==='critic'?this.config.provider.criticModel:this.config.provider.model;}
+ private async completion(system:string,data:unknown,model:string,extra:Record<string,unknown>){
+  const input=JSON.stringify({untrusted_data:data});
+  if(input.length>this.config.budget.maxInputChars)throw new IntegrationError('RouterAI','Контекст превышает лимит этапа');
+  const apiKey=required('ROUTERAI_API_KEY');
+  let response:Response;
+  try{response=await fetch(this.config.provider.baseUrl+'/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),body:JSON.stringify({model,stream:false,max_tokens:this.config.budget.maxTokens,temperature:0.2,messages:[{role:'system',content:system},{role:'user',content:input}],...extra})});}
+  catch{throw new IntegrationError('RouterAI','Сетевой запрос не завершён',true);}
+  const result=await boundedJson(response,this.config.web.maxBytes),usage=result.usage||{},message=result.choices?.[0]?.message;
+  if(result.model&&result.model!==model)throw new IntegrationError('RouterAI','Незапрошенная замена модели отклонена',false,usage,result.model);
+  if(message?.refusal)throw new IntegrationError('RouterAI','Модель отказалась от запроса',false,usage,model);
+  if(!message?.content||result.choices[0].finish_reason==='length')throw new IntegrationError('RouterAI','Ответ пуст или обрезан',true,usage,model);
+  return {message,usage,model,generationId:response.headers.get('X-Generation-Id')||result.id||null};
+ }
+ async chat(system:string,data:unknown,schema:Record<string,unknown>,role=''){
+  const result=await this.completion(system,data,this.modelFor(role),{response_format:{type:'json_schema',json_schema:{name:'farm_step',strict:true,schema}}});
+  let output;try{output=JSON.parse(result.message.content);}catch{throw new IntegrationError('RouterAI','Невалидный JSON',true,result.usage,result.model);}
+  return {output,usage:result.usage,model:result.model,generationId:result.generationId};
+ }
+ async research(query:string,keyTopic:boolean,instruction:string){
+  const result=await this.completion(instruction,{query},this.config.provider.model,{plugins:[{id:'web',engine:this.config.web.engine,max_results:keyTopic?this.config.web.keyResults:this.config.web.normalResults,search_prompt:'Ищи первичные источники по заданной теме. Не угадывай отсутствующие сведения.'}]});
+  return {text:String(result.message.content),annotations:Array.isArray(result.message.annotations)?result.message.annotations:[],usage:result.usage,model:result.model,generationId:result.generationId};
  }
  async transcribe(audio:Blob,filename:string){
-  const {model,channel,entry}=await this.ensureFree('stt');
-  // Speech routing must be provably free even if this endpoint ignores text-only routing options.
-  if(entry.providers.some((v:any)=>v.status==='ok'&&v.pricing?.per_second!==0))
-    throw new IntegrationError('Царь Роутер','Бесплатное распознавание сейчас нельзя гарантировать. Запись сохранена; введите текст идеи вручную');
-  const body=new FormData();body.append('file',audio,filename);body.append('model',model);body.append('language','ru');body.append('response_format','verbose_json');body.append('provider',JSON.stringify({only:[channel],allow_fallbacks:false,max_price:{per_second:0,prompt:0,completion:0}}));
-  const response=await fetch(this.config.provider.baseUrl+'/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+required('TSARROUTER_API_KEY')},body,signal:AbortSignal.timeout(120000)});
-  const result=await boundedJson(response);
-  if(!result.text?.trim())throw new IntegrationError('Царь Роутер','Речь не распознана');
-  if(Number(result.duration)>this.config.budget.audioSeconds)throw new IntegrationError('Царь Роутер','Аудио длиннее 5 минут');
-  return {text:String(result.text).slice(0,20000),usage:result.usage||{}};
+  if(audio.size>this.config.budget.audioBytes)throw new IntegrationError('RouterAI','Файл превышает лимит');
+  const body=new FormData();body.append('file',audio,filename);body.append('model',this.config.provider.speechModel);body.append('language','ru');body.append('response_format','verbose_json');
+  let response:Response;try{response=await fetch(this.config.provider.baseUrl+'/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+required('ROUTERAI_API_KEY')},body,signal:AbortSignal.timeout(120000)});}catch{throw new IntegrationError('RouterAI','Распознавание не завершено из-за сетевой ошибки',true);}
+  const result=await boundedJson(response),usage=result.usage||{},model=this.config.provider.speechModel;
+  if(!result.text?.trim())throw new IntegrationError('RouterAI','Речь не распознана',false,usage,model);
+  if(Number(result.duration??usage.seconds)>this.config.budget.audioSeconds)throw new IntegrationError('RouterAI','Аудио длиннее 5 минут',false,usage,model);
+  return {text:String(result.text).slice(0,20000),usage,model,generationId:response.headers.get('X-Generation-Id')||result.id||null};
  }
 }
 export const schemaFor=(schema:z.ZodType)=>z.toJSONSchema(schema,{target:'draft-7'});

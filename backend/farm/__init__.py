@@ -1,1 +1,0 @@
-"""Product Farm modular monolith."""

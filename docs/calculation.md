@@ -1,3 +1,5 @@
+> Исторический документ до v1.3; не является актуальной инструкцией запуска. Текущие изменения и покрытие: [release-v1.3.md](release-v1.3.md), эксплуатация: [serverless-deployment.md](serverless-deployment.md).
+
 # Расчёт и входные данные
 
 Реализация: backend/farm/calculation.py; версия метода и параметры сохраняются в EffectModel и CalculationRun.

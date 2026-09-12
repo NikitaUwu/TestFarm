@@ -1,11 +1,98 @@
 {
-  "id":"vercel-farm", "version":1,
-  "provider":{"id":"tsar-free","version":1,"baseUrl":"https://api.tsarrouter.ru/v1","model":"Qwen/Qwen3.5-35B-A3B","channel":"immers","speechModel":"openai/whisper-large-v3","speechChannel":"mts","freeOnly":true},
-  "web":{"id":"tavily-basic","version":1,"searchDepth":"basic","extractDepth":"basic","maxBytes":1048576,"maxPageChars":12000,"timeoutSeconds":20,"maxRedirects":3},
-  "budget":{"id":"bounded-research","version":1,"activeIdeas":10,"llmCalls":40,"searchCalls":8,"pageReads":15,"retries":2,"maxTokens":4500,"researchMinutes":30,"trialCases":2,"trialRepetitions":3,"variants":2,"agingMinutes":30,"startingTimeoutSeconds":90,"maxConcurrentResearch":1,"audioBytes":4194304,"audioSeconds":300},
-  "effect":{"id":"paired-bootstrap","version":3,"method":"paired_bootstrap","resamples":10000,"seed":42,"confidence":0.95,"minimumSample":5,"minimumQuality":0.9,"minimumEffectSeconds":1,"maximumManualRework":0.2,"scenarios":{"negative":{"volume":0.5,"quality":0.8,"manualRework":0.3},"base":{"volume":1,"quality":1,"manualRework":0.15},"favorable":{"volume":1.5,"quality":1,"manualRework":0.05}}},
-  "evidence":{"id":"read-sources","version":1,"minimumSources":5,"minimumOrganizations":3,"minimumAlternatives":3},
-  "prompts":{"id":"role-instructions","version":1},
-  "rules":{"id":"rules-validation","version":"3.0.0"},
-  "ui":{"pollMs":3000}
+  "id": "vercel-farm",
+  "version": 3,
+  "provider": {
+    "id": "routerai",
+    "version": 3,
+    "baseUrl": "https://routerai.ru/api/v1",
+    "model": "qwen/qwen3.5-9b",
+    "criticModel": "openai/gpt-oss-120b",
+    "speechModel": "openai/whisper-large-v3-turbo",
+    "fallbackModels": []
+  },
+  "web": {
+    "id": "routerai-web",
+    "version": 3,
+    "engine": "exa",
+    "normalResults": 3,
+    "keyResults": 5,
+    "targetCalls": 6,
+    "minimumCalls": 4,
+    "maxCitationChars": 12000,
+    "maxBytes": 1048576
+  },
+  "budget": {
+    "id": "bounded-research",
+    "version": 3,
+    "activeIdeas": 10,
+    "llmCalls": 40,
+    "searchCalls": 8,
+    "retries": 2,
+    "maxTokens": 4500,
+    "researchMinutes": 30,
+    "trialCases": 2,
+    "trialRepetitions": 3,
+    "variants": 2,
+    "agingMinutes": 30,
+    "startingTimeoutSeconds": 90,
+    "maxConcurrentResearch": 1,
+    "audioBytes": 4194304,
+    "audioSeconds": 300,
+    "maxRunRub": 20,
+    "maxMvpRub": 5,
+    "reserveLlmRub": 1,
+    "reserveCriticRub": 2,
+    "reserveSearchNormalRub": 2,
+    "reserveSearchKeyRub": 3,
+    "maxInputChars": 48000,
+    "retryDelayMs": 1500
+  },
+  "effect": {
+    "id": "paired-bootstrap",
+    "version": 3,
+    "method": "paired_bootstrap",
+    "resamples": 10000,
+    "seed": 42,
+    "confidence": 0.95,
+    "minimumSample": 5,
+    "minimumQuality": 0.9,
+    "minimumEffectSeconds": 1,
+    "maximumManualRework": 0.2,
+    "scenarios": {
+      "negative": {
+        "volume": 0.5,
+        "quality": 0.8,
+        "manualRework": 0.3
+      },
+      "base": {
+        "volume": 1,
+        "quality": 1,
+        "manualRework": 0.15
+      },
+      "favorable": {
+        "volume": 1.5,
+        "quality": 1,
+        "manualRework": 0.05
+      }
+    }
+  },
+  "evidence": {
+    "id": "routerai-citations",
+    "version": 3,
+    "minimumSources": 5,
+    "minimumOrganizations": 3,
+    "minimumAlternatives": 3,
+    "fullPageRead": false
+  },
+  "prompts": {
+    "id": "role-instructions",
+    "version": 3
+  },
+  "rules": {
+    "id": "rules-validation",
+    "version": "3.0.0"
+  },
+  "ui": {
+    "pollMs": 3000
+  }
 }

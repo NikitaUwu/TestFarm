@@ -1,3 +1,5 @@
+> Исторический документ до v1.3; не является актуальной инструкцией запуска. Текущие изменения и покрытие: [release-v1.3.md](release-v1.3.md), эксплуатация: [serverless-deployment.md](serverless-deployment.md).
+
 # Web на Vercel, backend на отдельном сервере
 
 Версия: 1, 2026-09-10. Эта схема публикует только Next.js из web/. API, Worker, Runner, Rules, PostgreSQL и MinIO продолжают работать вместе через Docker Compose. Временный Cloudflare Tunnel может предоставить HTTPS-доступ к API на ноутбуке; ноутбук и туннель должны оставаться включёнными.
