@@ -1852,13 +1852,37 @@ h1, h2, h3, h4, p {
 }
 
 .auth-card {
+  position: relative;
   width: 100%;
   max-width: 440px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 36px 32px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 20px 40px -15px rgba(0, 0, 0, 0.1);
+}
+
+.auth-card-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.auth-card-close:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--text);
+  transform: scale(1.05);
 }
 
 .auth-header {

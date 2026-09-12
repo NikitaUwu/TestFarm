@@ -9,10 +9,12 @@ export default function AuthForm({
   onLogin,
   error:initialError,
   defaultRegister=false,
+  onClose,
 }:{
   onLogin:(account:Account)=>void;
   error:string;
   defaultRegister?:boolean;
+  onClose?:()=>void;
 }){
   const [register,setRegister]=useState(defaultRegister);
   const [identifier,setIdentifier]=useState('');
@@ -23,20 +25,29 @@ export default function AuthForm({
   const [error,setError]=useState(initialError);
   const [busy,setBusy]=useState(false);
 
-  return(
-    <main className="auth-page">
-      <div className="auth-card">
-        <div className="auth-header">
-          <div className="auth-brand-badge">
-            <Icon name="sparkles" size={24}/>
-          </div>
-          <h2>Продуктовая ферма</h2>
-          <p className="auth-subtitle">
-            {register
-              ? 'Создайте аккаунт для автономной проверки продуктовых идей'
-              : 'Войдите в личный кабинет для работы с идеями'}
-          </p>
+  const cardContent=(
+    <div className="auth-card">
+      {onClose&&(
+        <button
+          type="button"
+          className="auth-card-close"
+          onClick={onClose}
+          aria-label="Закрыть окно"
+        >
+          <Icon name="x" size={18}/>
+        </button>
+      )}
+      <div className="auth-header">
+        <div className="auth-brand-badge">
+          <Icon name="sparkles" size={24}/>
         </div>
+        <h2>Продуктовая ферма</h2>
+        <p className="auth-subtitle">
+          {register
+            ? 'Создайте аккаунт для автономной проверки продуктовых идей'
+            : 'Войдите в личный кабинет для работы с идеями'}
+        </p>
+      </div>
 
         {/* Переключатель Вход / Регистрация */}
         <div className="auth-toggle-group">
@@ -182,7 +193,8 @@ export default function AuthForm({
           </button>
         </form>
       </div>
-    </main>
   );
+
+  return onClose ? cardContent : <main className="auth-page">{cardContent}</main>;
 }
 

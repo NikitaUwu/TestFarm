@@ -293,15 +293,7 @@ export default function LandingPage({
       {/* Модальное окно авторизации/регистрации */}
       {authMode&&(
         <div className="ui-modal-backdrop" onClick={()=>setAuthMode(null)}>
-          <div className="landing-auth-modal" onClick={e=>e.stopPropagation()}>
-            <button
-              type="button"
-              className="landing-modal-close"
-              onClick={()=>setAuthMode(null)}
-              aria-label="Закрыть"
-            >
-              <Icon name="x" size={20}/>
-            </button>
+          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:440}}>
             <AuthForm
               onLogin={account=>{
                 setAuthMode(null);
@@ -309,6 +301,7 @@ export default function LandingPage({
               }}
               error={error}
               defaultRegister={authMode==='register'}
+              onClose={()=>setAuthMode(null)}
             />
           </div>
         </div>
