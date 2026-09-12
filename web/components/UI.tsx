@@ -323,7 +323,7 @@ export function PromptTemplates({ onSelect }: { onSelect: (t: typeof IDEA_TEMPLA
     <div className="ui-templates-container">
       <div className="ui-templates-header">
         <Icon name="lightbulb" size={16} />
-        <span>Или начните с готового примера гипотезы:</span>
+        <span>Или начните с готового примера идеи:</span>
       </div>
       <div className="ui-templates-grid">
         {IDEA_TEMPLATES.map((tmpl, idx) => (

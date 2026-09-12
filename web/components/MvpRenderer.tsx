@@ -31,7 +31,7 @@ export default function MvpRenderer({id}:{id:string}){
         <header className="mvp-sandbox-header">
           <a href="/" className="mvp-back-link">
             <Icon name="arrow" size={16}/>
-            <span>Вернуться к гипотезам</span>
+            <span>Вернуться к идеям</span>
           </a>
           <div className="mvp-header-meta">
             <Badge variant={isReady?'emerald':'amber'} dot={!isReady}>

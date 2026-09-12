@@ -2,6 +2,7 @@
 import {useEffect,useState,useMemo} from 'react';
 import policy from '../farm/policy.json';
 import AuthForm,{Account} from './AuthForm';
+import LandingPage from './LandingPage';
 import {api,ApiError,post,del,stageNames,priorityNames,formatDate} from '../lib/api';
 import {
   Icon,
@@ -98,17 +99,19 @@ export default function CloudFarm(){
       setTitle(idea.title);
       setPriority(idea.priority);
       setRun(idea.runs[0]?await api('/research/'+idea.runs[0].id+'/status'):null);
+      setAudioId(null);
+      setAudioCost(null);
     });
   };
 
   const startNewIdea=()=>{
     setSelected(null);
-    setRun(null);
-    setAudioId(null);
-    setAudioCost(null);
     setText('');
     setTitle('');
     setPriority(1);
+    setRun(null);
+    setAudioId(null);
+    setAudioCost(null);
     setError('');
   };
 
@@ -143,10 +146,15 @@ export default function CloudFarm(){
     setBusy(true);
     setError('');
     try{
-      const form=new FormData();
-      form.set('file',file);
-      const result=await api('/audio',{method:'POST',body:form});
-      setAudioId(result.artifactId);
+      const body=new FormData();
+      body.append('file',file,file.name);
+      const res=await fetch('/api/audio/transcribe',{method:'POST',body});
+      if(!res.ok){
+        const errData=await res.json().catch(()=>({error:'Ошибка распознавания'}));
+        throw new Error(errData.error||`HTTP ${res.status}`);
+      }
+      const result=await res.json();
+      if(result.artifactId)setAudioId(result.artifactId);
       if(result.usage?.cost!=null){
         setAudioCost(`Распознано: ${Number(result.usage.cost).toFixed(4)} ₽`);
       }
@@ -196,7 +204,7 @@ export default function CloudFarm(){
     </main>
   );
 
-  if(!account)return <AuthForm onLogin={setAccount} error={error}/>;
+  if(!account)return <LandingPage onLogin={setAccount} error={error}/>;
 
   const currentSpending=run?.counters?.researchSpend;
   const currentStepInfo=run?.stage?RUN_STAGES[run.stage]:null;
@@ -210,7 +218,7 @@ export default function CloudFarm(){
             <span className="farm-brand-mark"><Icon name="sparkles" size={20}/></span>
             <div>
               <strong>Продуктовая ферма</strong>
-              <span className="farm-tagline">Автономный валидатор гипотез</span>
+              <span className="farm-tagline">Автономный валидатор идей</span>
             </div>
           </div>
           <a href="/docs" className="farm-docs-link">
@@ -242,11 +250,11 @@ export default function CloudFarm(){
 
       {/* Основная рабочая область */}
       <div className="farm-layout">
-        {/* Сайдбар со списком идей */}
+        {/* Сайдбар со списком идей (зафиксирован sticky) */}
         <aside className="farm-sidebar">
           <div className="farm-sidebar-top">
             <div className="farm-sidebar-title-row">
-              <h3>Мои гипотезы</h3>
+              <h3>Мои идеи</h3>
               <span className="farm-ideas-count">{ideas.length} / {policy.budget.activeIdeas}</span>
             </div>
             <button
@@ -255,14 +263,14 @@ export default function CloudFarm(){
               onClick={startNewIdea}
             >
               <Icon name="plus" size={18} />
-              <span>Новая гипотеза</span>
+              <span>Новая идея</span>
             </button>
             {ideas.length>0&&(
               <div className="farm-search-box">
                 <Icon name="search" size={16} />
                 <input
                   type="text"
-                  placeholder="Поиск по гипотезам…"
+                  placeholder="Поиск по идеям…"
                   value={searchQuery}
                   onChange={e=>setSearchQuery(e.target.value)}
                 />
@@ -273,7 +281,7 @@ export default function CloudFarm(){
           <nav className="farm-ideas-list" aria-label="Список идей">
             {filteredIdeas.length===0?(
               <div className="farm-sidebar-empty">
-                <p>{searchQuery?'Ничего не найдено':'Нет сохранённых гипотез'}</p>
+                <p>{searchQuery?'Ничего не найдено':'Нет сохранённых идей'}</p>
               </div>
             ):(
               filteredIdeas.map(idea=>{
@@ -312,7 +320,7 @@ export default function CloudFarm(){
                     <strong className="farm-idea-title">{idea.title}</strong>
                     <div className="farm-idea-item-footer">
                       <span className="farm-idea-priority">
-                        Приоритет: {priorityNames[idea.priority]}
+                        {priorityNames[idea.priority]} приоритет
                       </span>
                       {idea.updatedAt&&(
                         <span className="farm-idea-date">{formatDate(idea.updatedAt)}</span>
@@ -333,7 +341,7 @@ export default function CloudFarm(){
           <section className="farm-card farm-intake-card">
             <div className="farm-card-header">
               <div>
-                <span className="farm-card-tag">{selected?'Управление гипотезой':'Проверка гипотезы'}</span>
+                <span className="farm-card-tag">{selected?'Управление идеей':'Проверка идеи'}</span>
                 <h1 className="farm-main-title">{selected?selected.title:'С какой идеи начнём?'}</h1>
               </div>
               {selected&&(
@@ -372,7 +380,7 @@ export default function CloudFarm(){
               act(async()=>{
                 let idea=selected;
                 const input={
-                  title:title.trim()||text.trim().slice(0,80)||'Новая гипотеза',
+                  title:title.trim()||text.trim().slice(0,80)||'Новая идея',
                   transcript:text,
                   priority,
                 };
@@ -388,9 +396,61 @@ export default function CloudFarm(){
                 await refresh();
               });
             }}>
+              {/* Блок явных параметров идеи (Название и Приоритет) */}
+              <div className="farm-params-card">
+                <div className="farm-params-header">
+                  <div className="farm-params-icon">
+                    <Icon name="settings" size={18}/>
+                  </div>
+                  <div>
+                    <strong>Параметры идеи</strong>
+                    <span className="farm-params-sub">Название и приоритетность исследования в очереди</span>
+                  </div>
+                </div>
+
+                <div className="farm-params-grid">
+                  <label className="farm-label">
+                    <span>Название идеи</span>
+                    <input
+                      type="text"
+                      maxLength={180}
+                      value={title}
+                      onChange={e=>setTitle(e.target.value)}
+                      placeholder="Например: ИИ-помощник службы поддержки"
+                      className="farm-input farm-input-lg"
+                    />
+                    <span className="farm-field-hint">Понятное краткое название для карточки</span>
+                  </label>
+
+                  <div className="farm-priority-picker">
+                    <span className="farm-priority-label">Приоритет в очереди</span>
+                    <div className="farm-priority-chips" role="radiogroup" aria-label="Приоритет в очереди">
+                      {priorityNames.map((label,idx)=>{
+                        const isSelected=priority===idx;
+                        const colors=['priority-low','priority-normal','priority-high'];
+                        return(
+                          <button
+                            key={label}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            className={`farm-priority-chip ${colors[idx]} ${isSelected?'active':''}`}
+                            onClick={()=>setPriority(idx)}
+                          >
+                            <span className="priority-dot" />
+                            <span className="priority-title">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span className="farm-field-hint">Влияет на очерёдность взятия идеи в обработку</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="farm-field-group">
                 <label className="farm-label">
-                  <span>Суть гипотезы</span>
+                  <span>Суть идеи и сценарий</span>
                   <textarea
                     rows={5}
                     required
@@ -425,36 +485,6 @@ export default function CloudFarm(){
                 {audioCost&&<span className="farm-audio-status"><Icon name="checkCircle" size={14}/> {audioCost}</span>}
               </div>
 
-              {/* Дополнительные параметры (название и приоритет) */}
-              <details className="farm-options-details" open={!!selected}>
-                <summary><Icon name="settings" size={16}/> Параметры гипотезы (название и приоритет)</summary>
-                <div className="farm-options-grid">
-                  <label className="farm-label">
-                    <span>Краткое название</span>
-                    <input
-                      type="text"
-                      maxLength={180}
-                      value={title}
-                      onChange={e=>setTitle(e.target.value)}
-                      placeholder="Например: ИИ-помощник службы поддержки"
-                      className="farm-input"
-                    />
-                  </label>
-                  <label className="farm-label">
-                    <span>Приоритет в очереди</span>
-                    <select
-                      value={priority}
-                      onChange={e=>setPriority(Number(e.target.value))}
-                      className="farm-select"
-                    >
-                      {priorityNames.map((label,idx)=>(
-                        <option value={idx} key={label}>{label}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </details>
-
               <div className="farm-form-actions">
                 <button
                   type="submit"
@@ -462,7 +492,7 @@ export default function CloudFarm(){
                   disabled={busy||!text.trim()||['queued','starting','running'].includes(run?.status)}
                 >
                   <Icon name="rocket" size={18} />
-                  <span>{selected?'Запустить повторное исследование':'Запустить исследование гипотезы'}</span>
+                  <span>{selected?'Запустить повторное исследование':'Запустить исследование идеи'}</span>
                 </button>
                 {selected&&(
                   <button
@@ -647,8 +677,8 @@ export default function CloudFarm(){
       {/* Модальное окно подтверждения удаления */}
       <ConfirmModal
         open={deleteModalOpen}
-        title="Удалить гипотезу?"
-        text={`Вы действительно хотите удалить гипотезу «${ideaToDelete?.title||'Без названия'}»? Все сохранённые прогоны, расчёты и прототипы будут безвозвратно удалены.`}
+        title="Удалить идею?"
+        text={`Вы действительно хотите удалить идею «${ideaToDelete?.title||'Без названия'}»? Все сохранённые прогоны, расчёты и прототипы будут безвозвратно удалены.`}
         confirmLabel="Да, удалить"
         cancelLabel="Отмена"
         busy={busy}
@@ -985,7 +1015,7 @@ export function CloudReport({
           <div className="report-section-header">
             <div>
               <span className="report-section-tag">Действие</span>
-              <h2>Принятие решения по гипотезе</h2>
+              <h2>Принятие решения по идее</h2>
             </div>
           </div>
 
@@ -1029,7 +1059,7 @@ export function CloudReport({
                     className="ui-btn ui-btn-subtle"
                     onClick={()=>decide('stop')}
                   >
-                    Остановить гипотезу
+                    Остановить идею
                   </button>
                 </div>
               </div>
@@ -1049,7 +1079,7 @@ export function CloudReport({
                   className="ui-btn ui-btn-danger-outline"
                   onClick={()=>decide('stop')}
                 >
-                  Остановить гипотезу
+                  Остановить идею
                 </button>
               </div>
             )}

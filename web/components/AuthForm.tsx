@@ -5,8 +5,16 @@ import {Icon,Notice} from './UI';
 
 export type Account={id:string;username:string;email:string|null};
 
-export default function AuthForm({onLogin,error:initialError}:{onLogin:(account:Account)=>void;error:string}){
-  const [register,setRegister]=useState(false);
+export default function AuthForm({
+  onLogin,
+  error:initialError,
+  defaultRegister=false,
+}:{
+  onLogin:(account:Account)=>void;
+  error:string;
+  defaultRegister?:boolean;
+}){
+  const [register,setRegister]=useState(defaultRegister);
   const [identifier,setIdentifier]=useState('');
   const [username,setUsername]=useState('');
   const [email,setEmail]=useState('');
@@ -25,8 +33,8 @@ export default function AuthForm({onLogin,error:initialError}:{onLogin:(account:
           <h2>Продуктовая ферма</h2>
           <p className="auth-subtitle">
             {register
-              ? 'Создайте аккаунт для автономной проверки продуктовых гипотез'
-              : 'Войдите в личный кабинет для работы с гипотезами'}
+              ? 'Создайте аккаунт для автономной проверки продуктовых идей'
+              : 'Войдите в личный кабинет для работы с идеями'}
           </p>
         </div>
 

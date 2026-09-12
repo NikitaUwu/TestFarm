@@ -18,7 +18,7 @@ export default function SharedReport({token}:{token:string}){
         <div className="farm-card-header">
           <div>
             <span className="farm-card-tag">Публичный доступ</span>
-            <h1 className="farm-main-title">Аналитический отчёт гипотезы</h1>
+            <h1 className="farm-main-title">Аналитический отчёт идеи</h1>
           </div>
           <a href="/" className="ui-btn ui-btn-secondary ui-btn-sm">
             <span>Войти в ферму</span>
