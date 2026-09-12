@@ -36,6 +36,8 @@ export function Icon({name,size=20,className=''}:{name:string;size?:number;class
     play:<><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></>,
     refresh:<><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></>,
     archive:<><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/></>,
+    share:<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>,
+    download:<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></>,
   };
   return (
     <svg
@@ -104,14 +106,125 @@ export function MetricCard({
   );
 }
 
+export function calculateViabilityScore(report: any): number {
+  if (!report) return 50;
+  const rec = report.assessment?.recommendation || '';
+  let score = 50;
+  if (rec === 'Развивать') score = 82;
+  else if (rec === 'Остановить') score = 24;
+  else if (rec === 'Требуется предварительная проверка') score = 58;
+
+  // Модификаторы по расчету бутстрапа
+  if (report.calculation?.eligible === true) score += 6;
+  if (report.calculation?.eligible === false) score -= 6;
+
+  // Дельта секунд
+  const delta = report.calculation?.variants?.[0]?.measuredEffect?.deltaSeconds;
+  if (delta != null) {
+    if (delta > 15) score += 4;
+    else if (delta > 5) score += 2;
+    else if (delta < 0) score -= 5;
+  }
+
+  // Ежемесячная экономия часов
+  const monthlySeconds = report.calculation?.scenarios?.base?.[0]?.monthlySeconds;
+  if (monthlySeconds != null) {
+    if (monthlySeconds > 72000) score += 4;
+    else if (monthlySeconds > 36000) score += 2;
+  }
+
+  // Количество проверенных источников
+  const sourcesCount = report.sources?.length || 0;
+  if (sourcesCount >= 4) score += 3;
+  else if (sourcesCount >= 2) score += 1;
+
+  return Math.min(96, Math.max(8, Math.round(score)));
+}
+
+export function ViabilityGauge({
+  score,
+  size = 106,
+  showLabel = true,
+}: {
+  score: number;
+  size?: number;
+  showLabel?: boolean;
+}) {
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimatedScore(score);
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [score]);
+
+  const radius = 40;
+  const stroke = 8;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (animatedScore / 100) * circumference;
+  const strokeDashoffset = circumference - progress;
+
+  const isHigh = score >= 75;
+  const isLow = score < 45;
+  const color = isHigh ? '#10b981' : isLow ? '#ef4444' : '#f59e0b';
+  const label = isHigh ? 'Высокий потенциал' : isLow ? 'Критический риск' : 'Умеренный риск';
+
+  return (
+    <div className="viability-gauge-container">
+      <div className="viability-gauge-circle" style={{ width: size, height: size }}>
+        <svg width={size} height={size} viewBox="0 0 100 100" className="viability-svg">
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            className="viability-track"
+            strokeWidth={stroke}
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            className="viability-indicator"
+            strokeWidth={stroke}
+            stroke={color}
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            transform="rotate(-90 50 50)"
+          />
+        </svg>
+        <div className="viability-gauge-text">
+          <span className="viability-score-num" style={{ color }}>
+            {animatedScore}
+          </span>
+          <span className="viability-score-max">/100</span>
+        </div>
+      </div>
+      {showLabel && (
+        <div className="viability-gauge-caption">
+          <span className="viability-badge" style={{ color, borderColor: color }}>
+            {label}
+          </span>
+          <span className="viability-caption-sub">Жизнеспособность</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VerdictBanner({
   recommendation,
   summary,
   reasons = [],
+  viabilityScore,
+  onOpenPitchCard,
 }: {
   recommendation: string;
   summary: string;
   reasons?: string[];
+  viabilityScore?: number;
+  onOpenPitchCard?: () => void;
 }) {
   const isDevelop = recommendation === 'Развивать';
   const isStop = recommendation === 'Остановить';
@@ -125,26 +238,46 @@ export function VerdictBanner({
 
   return (
     <div className={`ui-verdict-banner ${variant}`}>
-      <div className="ui-verdict-badge-row">
-        <div className="ui-verdict-icon">
-          <Icon name={iconName} size={26} />
+      <div className="ui-verdict-main-row">
+        <div className="ui-verdict-content">
+          <div className="ui-verdict-badge-row">
+            <div className="ui-verdict-icon">
+              <Icon name={iconName} size={26} />
+            </div>
+            <div>
+              <span className="ui-verdict-tag">Вердикт аналитической системы</span>
+              <h2 className="ui-verdict-title">{title}</h2>
+            </div>
+          </div>
+          {summary && <p className="ui-verdict-summary">{summary}</p>}
+          {reasons.length > 0 && (
+            <div className="ui-verdict-reasons">
+              <strong>Ключевые аргументы:</strong>
+              <ul>
+                {reasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-        <div>
-          <span className="ui-verdict-tag">Вердикт аналитической системы</span>
-          <h2 className="ui-verdict-title">{title}</h2>
-        </div>
+
+        {viabilityScore != null && (
+          <div className="ui-verdict-gauge-box">
+            <ViabilityGauge score={viabilityScore} />
+            {onOpenPitchCard && (
+              <button
+                type="button"
+                className="ui-btn ui-btn-primary ui-btn-sm pitch-card-trigger-btn"
+                onClick={onOpenPitchCard}
+              >
+                <Icon name="share" size={14} />
+                <span>Pitch Card идеи</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      {summary && <p className="ui-verdict-summary">{summary}</p>}
-      {reasons.length > 0 && (
-        <div className="ui-verdict-reasons">
-          <strong>Ключевые аргументы:</strong>
-          <ul>
-            {reasons.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

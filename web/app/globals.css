@@ -337,6 +337,113 @@ h1, h2, h3, h4, p {
   border-color: #fecaca;
 }
 
+.ui-verdict-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.ui-verdict-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-verdict-gauge-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.pitch-card-trigger-btn {
+  width: 100%;
+  justify-content: center;
+  font-size: 13px;
+  padding: 8px 14px;
+  box-shadow: 0 2px 8px rgba(245, 214, 92, 0.35);
+}
+
+/* Viability Gauge Component */
+.viability-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.viability-gauge-circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.viability-svg {
+  transform: rotate(0deg);
+}
+
+.viability-track {
+  fill: none;
+  stroke: #e2e8f0;
+}
+
+.viability-indicator {
+  fill: none;
+  transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.viability-gauge-text {
+  position: absolute;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.viability-score-num {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.viability-score-max {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.viability-gauge-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.viability-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.viability-caption-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .ui-verdict-badge-row {
   display: flex;
   align-items: center;
@@ -1231,6 +1338,29 @@ h1, h2, h3, h4, p {
 .report-anchor-nav a.nav-accent {
   background: var(--accent);
   color: #1a1a1a;
+}
+
+.report-nav-pitch-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: var(--accent);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(245, 214, 92, 0.35);
+}
+
+.report-nav-pitch-btn:hover {
+  background: #f3ce40;
+  transform: translateY(-1px);
 }
 
 .report-section {
@@ -3000,5 +3130,276 @@ h1, h2, h3, h4, p {
     flex-direction: column;
     gap: 16px;
     text-align: center;
+  }
+  .ui-verdict-main-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ui-verdict-gauge-box {
+    width: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Pitch Card Modal & Preview Styles
+   -------------------------------------------------------------------------- */
+.pitch-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.pitch-modal-dialog {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  max-width: 680px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  position: relative;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pitch-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.pitch-modal-title-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pitch-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #1a1a1a;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(245, 214, 92, 0.35);
+  flex-shrink: 0;
+}
+
+.pitch-modal-title-box h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: var(--text);
+}
+
+.pitch-modal-title-box p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Превью карточки */
+.pitch-card-preview {
+  background: linear-gradient(145deg, #131822 0%, #1c2436 100%);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  border: 1px solid rgba(245, 214, 92, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.pitch-card-preview::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(245, 214, 92, 0.15) 0%, rgba(245, 214, 92, 0) 70%);
+  pointer-events: none;
+}
+
+.pitch-preview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pitch-brand-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+}
+
+.pitch-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid;
+  font-size: 12px;
+}
+
+.pitch-score-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.pitch-score-badge strong {
+  color: #fff;
+  font-size: 13px;
+}
+
+.pitch-score-badge span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+}
+
+.pitch-verdict-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 12px;
+}
+
+.pitch-preview-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px;
+  line-height: 1.3;
+}
+
+.pitch-preview-summary {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 18px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pitch-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.pitch-metric-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pitch-metric-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.pitch-metric-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.pitch-metric-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pitch-reason-box {
+  background: rgba(245, 214, 92, 0.08);
+  border: 1px solid rgba(245, 214, 92, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.pitch-reason-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.pitch-reason-box p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.pitch-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+}
+
+.pitch-preview-url {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 550;
+}
+
+.pitch-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.pitch-modal-actions .ui-btn {
+  flex: 1;
+  min-width: 160px;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .pitch-metrics-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .pitch-modal-actions {
+    flex-direction: column;
+  }
+  .pitch-modal-actions .ui-btn {
+    width: 100%;
   }
 }

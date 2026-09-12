@@ -9,6 +9,8 @@ import {
   Badge,
   MetricCard,
   VerdictBanner,
+  ViabilityGauge,
+  calculateViabilityScore,
   VoiceRecorder,
   PromptTemplates,
   ConfirmModal,
@@ -16,6 +18,7 @@ import {
   Empty,
   NumberValue,
 } from './UI';
+import { PitchCardModal } from './PitchCardModal';
 
 const STAGE_LABELS:Record<string,string>={
   draft:'Черновик',
@@ -709,6 +712,9 @@ export function CloudReport({
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
   const [copied,setCopied]=useState(false);
+  const [pitchModalOpen,setPitchModalOpen]=useState(false);
+
+  const viabilityScore=calculateViabilityScore(report);
 
   const decide=async(action:string)=>{
     setBusy(true);
@@ -759,6 +765,15 @@ export function CloudReport({
         <a href="#risks"><Icon name="shield" size={15}/> Риски</a>
         <a href="#sources"><Icon name="search" size={15}/> Источники ({sourcesCount})</a>
         {!readOnly&&<a href="#decision" className="nav-accent"><Icon name="checkCircle" size={15}/> Решение</a>}
+        <button
+          type="button"
+          className="report-nav-pitch-btn"
+          onClick={()=>setPitchModalOpen(true)}
+          title="Сформировать Pitch Card для чатов и руководства"
+        >
+          <Icon name="share" size={14}/>
+          <span>Pitch Card</span>
+        </button>
       </nav>
 
       {/* 1. Вердикт аналитической системы */}
@@ -767,6 +782,8 @@ export function CloudReport({
           recommendation={report.assessment?.recommendation||'Недостаточно данных'}
           summary={report.summary||'Исследование завершено'}
           reasons={report.assessment?.reasons||[]}
+          viabilityScore={viabilityScore}
+          onOpenPitchCard={()=>setPitchModalOpen(true)}
         />
 
         {/* Ключевые показатели */}
@@ -1086,6 +1103,14 @@ export function CloudReport({
             <div className="share-report-row">
               <button
                 type="button"
+                className="ui-btn ui-btn-primary ui-btn-sm"
+                onClick={()=>setPitchModalOpen(true)}
+              >
+                <Icon name="share" size={14}/>
+                <span>Pitch Card идеи</span>
+              </button>
+              <button
+                type="button"
                 className="ui-btn ui-btn-subtle ui-btn-sm"
                 onClick={handleShare}
               >
@@ -1098,6 +1123,16 @@ export function CloudReport({
           </div>
         </section>
       )}
+
+      {/* Модальное окно Pitch Card для шеринга в Slack/Telegram и экспорта PNG */}
+      <PitchCardModal
+        open={pitchModalOpen}
+        onClose={()=>setPitchModalOpen(false)}
+        report={report}
+        reportId={reportId}
+        ideaTitle={report.title||report.summary?.slice(0,60)}
+        viabilityScore={viabilityScore}
+      />
     </article>
   );
 }
