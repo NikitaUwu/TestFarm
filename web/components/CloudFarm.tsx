@@ -21,6 +21,7 @@ import {
 import { PitchCardModal } from './PitchCardModal';
 import { LiveIntelStream } from './LiveIntelStream';
 import { WhatIfSandbox } from './WhatIfSandbox';
+import { PostMvpMonitoring } from './PostMvpMonitoring';
 
 const STAGE_LABELS:Record<string,string>={
   draft:'Черновик',
@@ -720,6 +721,7 @@ export function CloudReport({
   const [busy,setBusy]=useState(false);
   const [copied,setCopied]=useState(false);
   const [pitchModalOpen,setPitchModalOpen]=useState(false);
+  const [sourcesExpanded,setSourcesExpanded]=useState(false);
 
   const viabilityScore=calculateViabilityScore(report);
 
@@ -771,6 +773,7 @@ export function CloudReport({
         <a href="#market"><Icon name="user" size={15}/> Рынок и ЦА</a>
         <a href="#risks"><Icon name="shield" size={15}/> Риски</a>
         <a href="#sources"><Icon name="search" size={15}/> Источники ({sourcesCount})</a>
+        <a href="#monitoring"><Icon name="activity" size={15}/> Мониторинг</a>
         {!readOnly&&<a href="#decision" className="nav-accent"><Icon name="checkCircle" size={15}/> Решение</a>}
         <button
           type="button"
@@ -991,51 +994,113 @@ export function CloudReport({
       </section>
 
       {/* 6. Источники и факты */}
-      <section id="sources" className="report-section">
-        <div className="report-section-header">
+      <section id="sources" className="report-section sources-section">
+        <div className="report-section-header sources-header">
           <div>
-            <span className="report-section-tag">Доказательная база</span>
+            <div className="sources-tag-row">
+              <span className="report-section-tag">Доказательная база</span>
+              <span className="sources-count-badge">
+                {sourcesCount} {sourcesCount===1?'источник':sourcesCount>=2&&sourcesCount<=4?'источника':'источников'}
+              </span>
+            </div>
             <h2>Проверенные источники и цитаты</h2>
           </div>
-          <p className="report-section-desc">
-            Все факты подтверждены прямыми цитатами из результатов поиска без домысливания.
-          </p>
+          <button
+            type="button"
+            className="sources-toggle-btn ui-btn ui-btn-subtle ui-btn-sm"
+            onClick={()=>setSourcesExpanded(!sourcesExpanded)}
+            aria-expanded={sourcesExpanded}
+          >
+            <Icon name={sourcesExpanded?'chevronUp':'chevronDown'} size={15}/>
+            <span>{sourcesExpanded?'Свернуть источники':`Показать все (${sourcesCount})`}</span>
+          </button>
         </div>
 
-        <div className="sources-list">
-          {report.sources?.map((source:any)=>(
-            <div key={source.id} className="source-card">
-              <div className="source-card-header">
-                <a
-                  href={/^https:\/\//.test(source.url)?source.url:undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="source-title-link"
-                >
-                  <span>{source.title||source.url}</span>
-                  <Icon name="externalLink" size={14}/>
-                </a>
-                <span className="source-meta">
-                  {source.publisher||source.domain||source.organization}
-                  {source.published_at&&` · ${source.published_at}`}
-                </span>
+        {!sourcesExpanded?(
+          <div
+            className="sources-collapsed-card"
+            onClick={()=>setSourcesExpanded(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={e=>e.key==='Enter'&&setSourcesExpanded(true)}
+          >
+            <div className="sources-collapsed-left">
+              <div className="sources-preview-domains">
+                {Array.from(new Set((report.sources||[]).map((s:any)=>s.publisher||s.domain||(s.url?s.url.replace(/^https?:\/\//,'').split('/')[0]:'веб-источник')).filter(Boolean))).slice(0,5).map((domain:any,idx)=>(
+                  <span key={idx} className="source-domain-chip">
+                    <Icon name="externalLink" size={11}/>
+                    <span>{domain}</span>
+                  </span>
+                ))}
+                {(report.sources?.length||0)>5&&(
+                  <span className="source-domain-chip more">+{report.sources.length-5} ещё</span>
+                )}
               </div>
-              {source.snippet&&(
-                <blockquote className="source-quote">
-                  «{source.snippet}»
-                </blockquote>
-              )}
-              {source.supported_claim&&(
-                <div className="source-claim">
-                  <strong>Связанный вывод:</strong> {source.supported_claim}
-                </div>
-              )}
+              <p className="sources-collapsed-hint">
+                Все факты подтверждены прямыми цитатами из поиска без домысливания. Нажмите, чтобы развернуть детальные цитаты и выводы.
+              </p>
             </div>
-          ))}
-        </div>
+            <span className="sources-expand-action">
+              <span>Развернуть цитаты</span>
+              <Icon name="chevronDown" size={14}/>
+            </span>
+          </div>
+        ):(
+          <>
+            <p className="report-section-desc">
+              Все факты подтверждены прямыми цитатами из результатов поиска без домысливания.
+            </p>
+
+            <div className="sources-list">
+              {report.sources?.map((source:any)=>(
+                <div key={source.id} className="source-card">
+                  <div className="source-card-header">
+                    <a
+                      href={/^https:\/\//.test(source.url)?source.url:undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="source-title-link"
+                    >
+                      <span>{source.title||source.url}</span>
+                      <Icon name="externalLink" size={14}/>
+                    </a>
+                    <span className="source-meta">
+                      {source.publisher||source.domain||source.organization}
+                      {source.published_at&&` · ${source.published_at}`}
+                    </span>
+                  </div>
+                  {source.snippet&&(
+                    <blockquote className="source-quote">
+                      «{source.snippet}»
+                    </blockquote>
+                  )}
+                  {source.supported_claim&&(
+                    <div className="source-claim">
+                      <strong>Связанный вывод:</strong> {source.supported_claim}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="sources-footer-collapse">
+              <button
+                type="button"
+                className="ui-btn ui-btn-subtle ui-btn-sm"
+                onClick={()=>setSourcesExpanded(false)}
+              >
+                <Icon name="chevronUp" size={14}/>
+                <span>Свернуть список источников</span>
+              </button>
+            </div>
+          </>
+        )}
       </section>
 
-      {/* 7. Блок принятия решения */}
+      {/* 7. Пост-MVP мониторинг бизнес-метрик (§32 ТЗ) */}
+      <PostMvpMonitoring report={report} readOnly={readOnly} />
+
+      {/* 8. Блок принятия решения */}
       {!readOnly&&(
         <section id="decision" className="report-section report-decision-section">
           <div className="report-section-header">

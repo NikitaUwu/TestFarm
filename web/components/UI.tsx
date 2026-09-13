@@ -38,6 +38,8 @@ export function Icon({name,size=20,className=''}:{name:string;size?:number;class
     archive:<><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/></>,
     share:<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>,
     download:<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></>,
+    chevronDown:<path d="m6 9 6 6 6-6"/>,
+    chevronUp:<path d="m18 15-6-6-6 6"/>,
   };
   return (
     <svg
