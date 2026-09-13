@@ -57,19 +57,29 @@ export async function researchToolStep(jobId:string,token:string,index:number){
    // Persist before the independent JSON call: repairs reuse these citations.
    await save(ctx.run.id,rawName,raw!,sha(query));
   }
-  for(const citation of citationSources(raw as any,query,ctx.config.web.maxCitationChars)){
-   await db().insert(S.sources).values({id:crypto.randomUUID(),runId:ctx.run.id,url:citation.url,content:citation}).onConflictDoNothing();
+   for(const citation of citationSources(raw as any,query,ctx.config.web.maxCitationChars)){
+    await db().insert(S.sources).values({id:crypto.randomUUID(),runId:ctx.run.id,url:citation.url,content:citation}).onConflictDoNothing();
+   }
+   const rawText=typeof raw?.text==='string'?raw.text.trim():'';
+   if(!rawText||rawText.length<30){
+    const fallback={summary:'Поисковый запрос не вернул текстовых данных.',claims:[],gaps:[`Нет доступных фрагментов по запросу: ${query}`],continueResearch:false,nextQuery:null,missingEvidence:previous?.missingEvidence||null,keyTopic:false};
+    await save(ctx.run.id,name,{continue:false,query,result:fallback},sha(name));return false;
+   }
+   const sources=await db().select().from(S.sources).where(eq(S.sources.runId,ctx.run.id));
+   const roundSources=sources.filter(s=>s.content?.query===query||s.content?.search_topic===query);
+   const activeSources=(roundSources.length>0?roundSources:sources.slice(-5)).slice(0,5);
+   const result=await ask(ctx.run.id,ctx.config,'source_researcher',prompts.researchRound,{query,index,text:rawText.slice(0,3000),sources:activeSources.map(s=>({id:s.id,url:s.url,snippet:s.content.snippet?.slice(0,500)||null})),previousQueries:Object.entries(ctx.data).filter(([k])=>k.startsWith('webAction:')).map(([,v])=>v.query).slice(-4)},C.researchRound);
+   result.claims=result.claims.filter(claim=>{const source=sources.find(s=>s.id===claim.sourceId);return claim.quote.length>0&&source?.content.snippet?.includes(claim.quote);});
+   for(const claim of result.claims){const source=sources.find(s=>s.id===claim.sourceId)!;await db().update(S.sources).set({content:{...source.content,supported_claim:claim.claim}}).where(eq(S.sources.id,source.id));}
+   const validSources=sources.filter(s=>Boolean(s.content?.snippet&&s.content.snippet.length>30));
+   const orgs=new Set(validSources.map(s=>s.content?.organization).filter(Boolean));
+   const enoughEvidence=validSources.length>=(ctx.config.evidence?.minimumSources||5)&&orgs.size>=(ctx.config.evidence?.minimumOrganizations||3);
+   const keepGoing=!enoughEvidence&&result.continueResearch&&Boolean(result.nextQuery)&&result.nextQuery!==query&&index+1<ctx.config.budget.searchCalls&&index+1<ctx.config.web.targetCalls;
+   await save(ctx.run.id,name,{continue:keepGoing,query,result},sha(name));return keepGoing;
+  }catch(error){
+   const message=error instanceof IntegrationError?error.message:'Исследование источников недоступно';await warning(ctx.run.id,message);
+   await save(ctx.run.id,name,{continue:false,query,error:message},sha(name));return false;
   }
-  const sources=await db().select().from(S.sources).where(eq(S.sources.runId,ctx.run.id));
-  const result=await ask(ctx.run.id,ctx.config,'source_researcher',prompts.researchRound,{query,index,text:String(raw!.text).slice(0,10000),sources:sources.slice(-12).map(s=>({id:s.id,url:s.url,snippet:s.content.snippet?.slice(0,1800)||null})),previousQueries:Object.entries(ctx.data).filter(([k])=>k.startsWith('webAction:')).map(([,v])=>v.query)},C.researchRound);
-  result.claims=result.claims.filter(claim=>{const source=sources.find(s=>s.id===claim.sourceId);return claim.quote.length>0&&source?.content.snippet?.includes(claim.quote);});
-  for(const claim of result.claims){const source=sources.find(s=>s.id===claim.sourceId)!;await db().update(S.sources).set({content:{...source.content,supported_claim:claim.claim}}).where(eq(S.sources.id,source.id));}
-  const keepGoing=result.continueResearch&&!!result.nextQuery&&result.nextQuery!==query&&index+1<ctx.config.budget.searchCalls;
-  await save(ctx.run.id,name,{continue:keepGoing,query,result},sha(name));return keepGoing;
- }catch(error){
-  const message=error instanceof IntegrationError?error.message:'Исследование источников недоступно';await warning(ctx.run.id,message);
-  await save(ctx.run.id,name,{continue:false,query,error:message},sha(name));return false;
- }
 }
 export async function runStage(jobId:string,token:string,name:string){
  'use step';
@@ -84,7 +94,7 @@ export async function runStage(jobId:string,token:string,name:string){
   }else if(name==='analyzeAudience')result=await ask(run.id,config,'audience_researcher',prompts.analyzeAudience,data.analyzeIdea||ctx.idea,C.audience);
   else if(name==='researchMarketAndEvidence'){
    const sources=await db().select().from(S.sources).where(eq(S.sources.runId,run.id));
-   result=await ask(run.id,config,'market_researcher',prompts.researchMarketAndEvidence,{idea:data.analyzeIdea||ctx.idea,audience:data.analyzeAudience,sources:sources.slice(0,10).map(s=>({id:s.id,url:s.url,snippet:String(s.content.snippet||'').slice(0,1800)}))},C.research);
+   result=await ask(run.id,config,'market_researcher',prompts.researchMarketAndEvidence,{idea:data.analyzeIdea||ctx.idea,audience:data.analyzeAudience,sources:sources.slice(0,8).map(s=>({id:s.id,url:s.url,snippet:String(s.content.snippet||'').slice(0,600)}))},C.research);
    for(const claim of result.claims){const source=sources.find(s=>s.id===claim.sourceId);if(!source||!claim.quote||!String(source.content.snippet||'').includes(claim.quote)){claim.provenance='ASSUMED';result.gaps.push('Утверждение не подтверждено точной цитатой из полученного фрагмента источника');}}
   }else if(name==='buildHypotheses')result=await ask(run.id,config,'strategist',prompts.buildHypotheses,{idea:data.analyzeIdea,research:data.researchMarketAndEvidence},C.hypotheses);
   else if(name==='proposeVariants'){
@@ -92,7 +102,7 @@ export async function runStage(jobId:string,token:string,name:string){
    await db().transaction(async tx=>{for(const variant of result.variants){variant.id=crypto.randomUUID();await tx.insert(S.variants).values({id:variant.id,runId:run.id,content:{...variant,fields:result.fields,componentVersion:config.rules.version}});}await tx.insert(S.steps).values({id:crypto.randomUUID(),runId:run.id,name,inputHash,result,status:'completed'}).onConflictDoNothing();});return;
   }else if(name==='prepareBaseline'){
    const sources=await db().select().from(S.sources).where(eq(S.sources.runId,run.id));
-   result=await ask(run.id,config,'efficiency_analyst',prompts.prepareBaseline,{idea:data.analyzeIdea||ctx.idea,plan:data.proposeVariants,sources:sources.slice(0,8).map(s=>({id:s.id,snippet:String(s.content.snippet||'').slice(0,1200)}))},C.datasetPlan);
+   result=await ask(run.id,config,'efficiency_analyst',prompts.prepareBaseline,{idea:data.analyzeIdea||ctx.idea,plan:data.proposeVariants,sources:sources.slice(0,6).map(s=>({id:s.id,snippet:String(s.content.snippet||'').slice(0,500)}))},C.datasetPlan);
    result.cases=result.cases.slice(0,config.budget.trialCases);
    const source=sources.find(s=>s.id===result.sourceId);
    if(result.provenance!=='EXTERNAL_FACT'||!source||result.cases.some((c:any)=>!c.sourceQuote||!String(source.content.snippet||'').includes(c.sourceQuote)||!String(source.content.snippet||'').includes(c.input))){result.provenance='SIMULATED';result.sourceId=null;result.warnings.push('Примеры созданы агентом; это демонстрационные данные');}

@@ -40,9 +40,9 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
      max_tokens:this.config.budget.maxTokens,
      max_completion_tokens:this.config.budget.maxTokens,
      reasoning_effort:'low',
-     temperature:0.2,
-     messages:[{role:'system',content:system},{role:'user',content:input}],
-     ...extra
+     temperature:0.1,
+     ...extra,
+     messages:[{role:'system',content:system},{role:'user',content:input}]
     })
    });
   }catch(err:any){
@@ -62,7 +62,10 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
   return {message:normalizedMessage,choice,usage,model,generationId:response.headers.get('X-Generation-Id')||result.id||null};
  }
  async chat(system:string,data:unknown,schema:Record<string,unknown>,role=''){
-  const result=await this.completion(system,data,this.modelFor(role),{response_format:{type:'json_schema',json_schema:{name:'farm_step',strict:true,schema}}});
+  const tokenCap=role==='source_researcher'?2048:(role==='critic'?4096:undefined);
+  const extra:Record<string,unknown>={response_format:{type:'json_schema',json_schema:{name:'farm_step',strict:true,schema}}};
+  if(tokenCap){extra.max_tokens=tokenCap;extra.max_completion_tokens=tokenCap;}
+  const result=await this.completion(system,data,this.modelFor(role),extra);
   let output;
   try{
    output=JSON.parse(result.message.content);
@@ -72,7 +75,7 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
   return {output,usage:result.usage,model:result.model,generationId:result.generationId};
  }
  async research(query:string,keyTopic:boolean,instruction:string){
-  const result=await this.completion(instruction,{query},this.config.provider.model,{plugins:[{id:'web',engine:this.config.web.engine,max_results:keyTopic?this.config.web.keyResults:this.config.web.normalResults,search_prompt:'Ищи первичные источники по заданной теме. Не угадывай отсутствующие сведения.'}]});
+  const result=await this.completion(instruction,{query},this.config.provider.model,{max_tokens:3072,max_completion_tokens:3072,plugins:[{id:'web',engine:this.config.web.engine,max_results:keyTopic?this.config.web.keyResults:this.config.web.normalResults,search_prompt:'Ищи первичные источники по заданной теме. Не угадывай отсутствующие сведения.'}]});
   return {text:String(result.message.content),annotations:Array.isArray(result.message.annotations)?result.message.annotations:[],usage:result.usage,model:result.model,generationId:result.generationId};
  }
  async transcribe(audio:Blob,filename:string){
