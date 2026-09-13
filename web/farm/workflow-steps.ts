@@ -90,15 +90,15 @@ export async function runStage(jobId:string,token:string,name:string){
  let result:Record<string,any>={};
  try{
   if(name==='analyzeIdea'){
-   result=await ask(run.id,config,'idea_analyst',prompts.analyzeIdea,ctx.idea,C.card);result.transcript=ctx.idea.transcript;
+   result=await ask(run.id,config,'idea_analyst',prompts.analyzeIdea,{...ctx.idea,transcript:String(ctx.idea.transcript||'').slice(0,8000)},C.card);result.transcript=ctx.idea.transcript;
   }else if(name==='analyzeAudience')result=await ask(run.id,config,'audience_researcher',prompts.analyzeAudience,data.analyzeIdea||ctx.idea,C.audience);
   else if(name==='researchMarketAndEvidence'){
    const sources=await db().select().from(S.sources).where(eq(S.sources.runId,run.id));
    result=await ask(run.id,config,'market_researcher',prompts.researchMarketAndEvidence,{idea:data.analyzeIdea||ctx.idea,audience:data.analyzeAudience,sources:sources.slice(0,8).map(s=>({id:s.id,url:s.url,snippet:String(s.content.snippet||'').slice(0,600)}))},C.research);
    for(const claim of result.claims){const source=sources.find(s=>s.id===claim.sourceId);if(!source||!claim.quote||!String(source.content.snippet||'').includes(claim.quote)){claim.provenance='ASSUMED';result.gaps.push('Утверждение не подтверждено точной цитатой из полученного фрагмента источника');}}
-  }else if(name==='buildHypotheses')result=await ask(run.id,config,'strategist',prompts.buildHypotheses,{idea:data.analyzeIdea,research:data.researchMarketAndEvidence},C.hypotheses);
+  }else if(name==='buildHypotheses')result=await ask(run.id,config,'strategist',prompts.buildHypotheses,{idea:data.analyzeIdea,research:{summary:data.researchMarketAndEvidence?.summary,alternatives:data.researchMarketAndEvidence?.alternatives?.slice(0,4),gaps:data.researchMarketAndEvidence?.gaps?.slice(0,5)}},C.hypotheses);
   else if(name==='proposeVariants'){
-   result=await ask(run.id,config,'strategist',prompts.proposeVariants,{idea:data.analyzeIdea||ctx.idea,hypotheses:data.buildHypotheses,research:data.researchMarketAndEvidence},C.variantPlan);
+   result=await ask(run.id,config,'strategist',prompts.proposeVariants,{idea:data.analyzeIdea||ctx.idea,hypotheses:data.buildHypotheses?.items?.slice(0,3),alternatives:data.researchMarketAndEvidence?.alternatives?.slice(0,3)},C.variantPlan);
    await db().transaction(async tx=>{for(const variant of result.variants){variant.id=crypto.randomUUID();await tx.insert(S.variants).values({id:variant.id,runId:run.id,content:{...variant,fields:result.fields,componentVersion:config.rules.version}});}await tx.insert(S.steps).values({id:crypto.randomUUID(),runId:run.id,name,inputHash,result,status:'completed'}).onConflictDoNothing();});return;
   }else if(name==='prepareBaseline'){
    const sources=await db().select().from(S.sources).where(eq(S.sources.runId,run.id));

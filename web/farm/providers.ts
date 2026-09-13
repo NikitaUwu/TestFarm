@@ -39,7 +39,7 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
      stream:false,
      max_tokens:this.config.budget.maxTokens,
      max_completion_tokens:this.config.budget.maxTokens,
-     reasoning_effort:'low',
+     ...(model.includes('qwen')?{reasoning_effort:'none'}:{}),
      temperature:0.1,
      ...extra,
      messages:[{role:'system',content:system},{role:'user',content:input}]
