@@ -45,7 +45,7 @@ export async function observed<T>(runId:string|null,actor:string,action:string,p
   await db().update(actionData).set({content:{input,output}}).where(eq(actionData.id,id));
   await db().update(logs).set({status:'completed',finishedAt:new Date(),durationMs:Date.now()-start,usage:{...value?.usage,costRub:costRub(value?.usage||{}),generationId:value?.generationId},model:value?.model,outputRef:`execution:${id}:output`}).where(eq(logs.id,id));return output;
  }catch(error){
-  const message=error instanceof IntegrationError?error.message:error instanceof z.ZodError?'Результат не прошёл схему':'Действие завершилось ошибкой';
+  const message=error instanceof IntegrationError?error.message:error instanceof z.ZodError?'Результат не прошёл схему':error instanceof Error&&error.message?error.message:'Действие завершилось ошибкой';
   await db().update(logs).set({status:'error',finishedAt:new Date(),durationMs:Date.now()-start,error:message,...(error instanceof IntegrationError?{model:error.model,usage:{...error.usage,costRub:costRub(error.usage)}}:{})}).where(eq(logs.id,id));throw error;
  }
 }
@@ -65,6 +65,9 @@ export async function ask<T extends z.ZodType>(runId:string,config:Configuration
    return {...response,output:parsed.data};
   },retry).then(r=>r.output);}catch(error){
    if(retry>=config.budget.retries||!(error instanceof IntegrationError&&error.retryable))throw error;
+   if(error instanceof IntegrationError&&(error.code.includes('лимит')||error.code.includes('пуст')||error.code.includes('обрезан')||error.code.includes('рассуждения'))){
+    repair='\nКРИТИЧНО: Отвечай максимально кратко, без длинных рассуждений, сразу верни компактный валидный JSON.';
+   }
    await new Promise(resolve=>setTimeout(resolve,config.budget.retryDelayMs*(retry+1)));
   }
  }

@@ -186,3 +186,22 @@ Verification: сборка Next.js и проверка типов прошли �
   - Секция `#monitoring` встроена в якорную навигацию и тело аналитического отчёта.
 - Verification: полная production-сборка `npm.cmd run build` успешно завершена с кодом 0.
 
+### 2026-09-13: Исправление ошибок лимита токенов, таймаутов и reasoning tokens в RouterAI
+- Диагностика:
+  - Запросы к БД в `farm_execution_log` выявили, что модель `qwen/qwen3.5-9b` тратила до 4500-5000 токенов исключительно на внутренние размышления (`completion_tokens_details.reasoning_tokens: 4500-5060`).
+  - При достижении лимита генерации шлюза RouterAI модель возвращала `finish_reason: "length"` с пустым текстом (`choice.message.content: ""`), не успев даже начать вывод результирующего JSON.
+  - Генерация 5000 токенов рассуждений занимала 55-120 секунд, вызывая сетевые таймауты `AbortSignal.timeout(120000)` и завершение функций Vercel (ошибки `idea_analyst`, `audience_researcher`, `strategist`, `efficiency_analyst`).
+- Внесённые исправления:
+  - `policy.json`: увеличен `budget.maxTokens` с 8192 до 16384.
+  - `providers.ts`:
+    - Передаются одновременно `max_tokens` и `max_completion_tokens: config.budget.maxTokens`, а также `reasoning_effort: 'low'` для минимизации цепочек размышлений на шлюзах, поддерживающих reasoning-параметры.
+    - Таймаут `fetch` увеличен со 120с до 150с с явной диагностикой в ошибке (`Таймаут ожидания ответа RouterAI`).
+    - Улучшена обработка `finish_reason === 'length'`: если модель успела сформировать валидный JSON, результат успешно парсится и принимается. Если же текст пуст из-за исчерпания токенов на рассуждения, выбрасывается информативная ошибка.
+  - `prompts.ts`:
+    - В базовый системный промпт `boundary` и во все ролевые промпты (`analyzeIdea`, `analyzeAudience`, `researchMarketAndEvidence`, `buildHypotheses`, `proposeVariants`, `prepareBaseline`, `criticalAssessment`, `buildReport`, `buildMvp`) добавлено строгое требование: не тратить токены на длинные внутренние размышления (thinking / chain-of-thought) и сразу формировать валидный компактный JSON.
+  - `execution.ts`:
+    - Улучшена прозрачность логов: реальные сообщения ошибок (`error.message`) больше не маскируются дефолтной заглушкой «Действие завершилось ошибкой».
+    - В механизм повторных попыток (`ask`) добавлено автоматическое внедрение директивы сжатия при повторах после ошибок переполнения лимита токенов.
+- Verification: полная production-сборка `npm.cmd run build` успешно завершена с кодом 0.
+
+
