@@ -635,6 +635,20 @@ export default function CloudFarm(){
                     report={run.reports[0].content}
                     reportId={run.reports[0].id}
                     onError={setError}
+                    onDecisionCompleted={async(action)=>{
+                      if(action==='stop'){
+                        await refresh();
+                        startNewIdea();
+                      }else if(action==='revise'){
+                        await refresh();
+                        if(selected){
+                          await open(selected.id);
+                          window.scrollTo({top:0,behavior:'smooth'});
+                        }
+                      }else{
+                        await refresh();
+                      }
+                    }}
                   />
                 </div>
               )}
@@ -701,14 +715,17 @@ export function CloudReport({
   reportId,
   onError,
   readOnly=false,
+  onDecisionCompleted,
 }:{
   report:any;
   reportId?:string;
   onError:(message:string)=>void;
   readOnly?:boolean;
+  onDecisionCompleted?:(action:string,result:any)=>void;
 }){
   const [criteria,setCriteria]=useState('');
   const [message,setMessage]=useState('');
+  const [localError,setLocalError]=useState('');
   const [busy,setBusy]=useState(false);
   const [copied,setCopied]=useState(false);
   const [pitchModalOpen,setPitchModalOpen]=useState(false);
@@ -736,18 +753,32 @@ export function CloudReport({
 
   const decide=async(action:string)=>{
     setBusy(true);
+    setLocalError('');
+    setMessage('');
     try{
       const id=reportId||report.id;
+      let finalAcceptance=criteria.split('\n').map(x=>x.trim()).filter(Boolean);
+      if(action==='develop'&&finalAcceptance.length===0){
+        finalAcceptance=PRESET_CRITERIA.slice(0,3);
+      }
       const value=await post('/reports/'+id+'/decision',{
         action,
-        acceptance:criteria.split('\n').map(x=>x.trim()).filter(Boolean),
+        acceptance:finalAcceptance,
       });
-      setMessage(value.mvp?'Прототип поставлен в очередь сборки.':'Решение зафиксировано.');
       if(value.mvp){
+        setMessage('Сборка прототипа запущена. Переход к MVP...');
         window.location.href='/mvp/'+value.mvp.id;
+      }else{
+        const successMsg=action==='stop'
+          ?'Идея остановлена и отправлена в архив.'
+          :'Идея отправлена на доработку в черновики.';
+        setMessage(successMsg);
+        onDecisionCompleted?.(action,value);
       }
     }catch(error){
-      onError((error as Error).message);
+      const msg=(error as Error).message||'Не удалось применить решение';
+      setLocalError(msg);
+      onError(msg);
     }finally{
       setBusy(false);
     }
@@ -1393,6 +1424,13 @@ export function CloudReport({
           </div>
 
           <div className="decision-box">
+            {localError&&(
+              <div className="decision-error-banner" role="alert">
+                <Icon name="alertTriangle" size={16}/>
+                <span>{localError}</span>
+              </div>
+            )}
+
             {/* Статусный баннер рекомендации */}
             <div className={`decision-verdict-banner ${
               report.assessment?.recommendation==='Развивать'
@@ -1468,7 +1506,7 @@ export function CloudReport({
                   <div className="decision-primary-action-row">
                     <button
                       type="button"
-                      disabled={busy||!criteria.trim()}
+                      disabled={busy}
                       className="ui-btn ui-btn-primary ui-btn-lg decision-submit-btn"
                       onClick={()=>decide('develop')}
                     >
@@ -1599,7 +1637,7 @@ export function CloudReport({
                     <div className="decision-primary-action-row">
                       <button
                         type="button"
-                        disabled={busy||!criteria.trim()}
+                        disabled={busy}
                         className="ui-btn ui-btn-primary ui-btn-md"
                         onClick={()=>decide('develop')}
                       >

@@ -70,18 +70,87 @@ export async function farmApi(request:NextRequest,path:string[]){
    }
    if(path[2]==='share'&&request.method==='DELETE'){await db().update(S.reports).set({publicToken:null}).where(eq(S.reports.id,report.id));return NextResponse.json({ok:true});}
    if(path[2]==='decision'&&request.method==='POST'){
-    const input=z.object({action:z.enum(['develop','revise','stop']),acceptance:z.array(z.string().trim().min(3).max(500)).max(10).default([]),comment:z.string().max(2000).default('')}).strict().parse(await request.json());
+    const body=await request.json().catch(()=>({}));
+    const input=z.object({
+      action:z.enum(['develop','revise','stop']),
+      acceptance:z.array(z.string().trim().min(1).max(500)).max(10).default([]),
+      comment:z.string().max(2000).default('')
+    }).strict().parse(body);
     if(run.stale)throw new ApiError(409,'Отчёт относится к предыдущей версии идеи');
-    if(input.action==='develop'&&(report.content.assessment?.recommendation!=='Развивать'||!input.acceptance.length))throw new ApiError(409,'Для MVP нужна рекомендация «Развивать» и критерии приёмки');
+
+    let finalAcceptance = input.acceptance.filter(Boolean);
+    if(input.action==='develop'&&finalAcceptance.length===0){
+      if(Array.isArray(report.content?.plan?.acceptance)&&report.content.plan.acceptance.length>0){
+        finalAcceptance=report.content.plan.acceptance.map((s:any)=>String(s).trim().slice(0,500)).filter(Boolean).slice(0,10);
+      }
+      if(finalAcceptance.length===0){
+        finalAcceptance=[
+          'Время генерации ответа < 3 секунд',
+          'Отсутствие фактических ошибок и галлюцинаций',
+          'Строгая структура данных (JSON/таблица)'
+        ];
+      }
+    }
+
     const result=await db().transaction(async tx=>{
      await tx.select().from(S.runs).where(eq(S.runs.id,run.id)).for('update');
      const [existing]=await tx.select().from(S.decisions).where(eq(S.decisions.reportId,report.id));
-     if(existing){const [mvp]=await tx.select().from(S.mvps).where(eq(S.mvps.decisionId,existing.id));return {decision:existing,mvp};}
-     const [decision]=await tx.insert(S.decisions).values({id:crypto.randomUUID(),reportId:report.id,content:input}).returning();
-     if(input.action!=='develop')return {decision,mvp:null};
-     const [mvp]=await tx.insert(S.mvps).values({id:crypto.randomUUID(),ideaId:run.ideaId,runId:run.id,decisionId:decision.id}).returning();
+     
+     const decisionContent={
+       ...input,
+       acceptance:finalAcceptance,
+       override:report.content?.assessment?.recommendation!=='Развивать'
+     };
+
+     let decision=existing;
+     if(!decision){
+       const [created]=await tx.insert(S.decisions).values({
+         id:crypto.randomUUID(),
+         reportId:report.id,
+         content:decisionContent
+       }).returning();
+       decision=created;
+     }else{
+       const [updated]=await tx.update(S.decisions).set({
+         content:decisionContent
+       }).where(eq(S.decisions.id,decision.id)).returning();
+       decision=updated;
+     }
+
+     if(input.action==='stop'){
+       await tx.update(S.jobs).set({status:'cancelled'}).where(and(inArray(S.jobs.runId,tx.select({id:S.runs.id}).from(S.runs).where(eq(S.runs.ideaId,run.ideaId))),inArray(S.jobs.status,active)));
+       await tx.update(S.runs).set({status:'cancelled'}).where(and(eq(S.runs.ideaId,run.ideaId),inArray(S.runs.status,active)));
+       await tx.update(S.ideas).set({stage:'archived',updatedAt:new Date()}).where(eq(S.ideas.id,run.ideaId));
+       return {decision,mvp:null,action:'stop'};
+     }
+
+     if(input.action==='revise'){
+       await tx.update(S.ideas).set({stage:'draft',updatedAt:new Date()}).where(eq(S.ideas.id,run.ideaId));
+       return {decision,mvp:null,action:'revise'};
+     }
+
+     // input.action === 'develop'
+     const [existingMvp]=await tx.select().from(S.mvps).where(eq(S.mvps.decisionId,decision.id));
+     if(existingMvp){
+       return {decision,mvp:existingMvp,action:'develop'};
+     }
+
+     const [mvp]=await tx.insert(S.mvps).values({
+       id:crypto.randomUUID(),
+       ideaId:run.ideaId,
+       runId:run.id,
+       decisionId:decision.id
+     }).returning();
      const [idea]=await tx.select().from(S.ideas).where(eq(S.ideas.id,run.ideaId));
-     await tx.insert(S.jobs).values({id:crypto.randomUUID(),runId:run.id,kind:'mvp',targetId:mvp.id,priority:idea.priority});return {decision,mvp};
+     await tx.update(S.ideas).set({stage:'mvp_building',updatedAt:new Date()}).where(eq(S.ideas.id,run.ideaId));
+     await tx.insert(S.jobs).values({
+       id:crypto.randomUUID(),
+       runId:run.id,
+       kind:'mvp',
+       targetId:mvp.id,
+       priority:idea.priority
+     });
+     return {decision,mvp,action:'develop'};
     });kick();return NextResponse.json(result);
    }
   }
