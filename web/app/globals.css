@@ -879,6 +879,18 @@ h1, h2, h3, h4, p {
   font-size: 12px;
 }
 
+.farm-mobile-menu-btn {
+  display: none;
+}
+
+.farm-sidebar-close-btn {
+  display: none;
+}
+
+.farm-sidebar-backdrop {
+  display: none;
+}
+
 /* Layout Grid */
 .farm-layout {
   display: grid;
@@ -3156,40 +3168,646 @@ h1, h2, h3, h4, p {
   }
 }
 
+/* --------------------------------------------------------------------------
+   Mobile & Tablet Responsive Adaptations (max-width: 768px)
+   -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
-  .farm-layout {
-    display: flex;
-    flex-direction: column;
+  /* Базовая защита от горизонтального скролла */
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
   }
-  .farm-sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    max-height: 280px;
+
+  .farm-shell {
+    max-width: 100vw;
+    overflow-x: hidden;
   }
-  .farm-content {
-    padding: 20px 14px;
+
+  /* Предотвращение зума инпутов в iOS Safari */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
   }
-  .farm-card {
-    padding: 20px;
-  }
-  .farm-options-grid, .mvp-sandbox-grid {
-    grid-template-columns: 1fr;
-  }
+
+  /* Шапка сервиса */
   .farm-header {
-    padding: 0 16px;
+    height: 56px;
+    padding: 0 12px;
   }
+
+  .farm-mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+
+  .farm-mobile-menu-btn:hover {
+    background: #e2e8f0;
+  }
+
+  .farm-mobile-ideas-tag {
+    font-size: 12px;
+  }
+
+  .farm-brand strong {
+    font-size: 14px;
+  }
+
   .farm-brand-mark {
     width: 28px;
     height: 28px;
   }
-  .farm-brand strong {
-    font-size: 15px;
-  }
+
   .farm-tagline {
     display: none;
   }
+
+  .farm-docs-link span {
+    display: none;
+  }
+
+  .farm-docs-link {
+    padding: 6px;
+    border-radius: 6px;
+  }
+
   .farm-budget-pill {
     display: none;
+  }
+
+  .farm-user-name {
+    display: none;
+  }
+
+  .farm-user-pill {
+    padding: 2px 4px 2px 2px;
+    background: transparent;
+    border: none;
+  }
+
+  .farm-logout-btn {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  /* Мобильный Drawer списка идей (Off-canvas) */
+  .farm-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .farm-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 86%;
+    max-width: 320px;
+    height: 100vh;
+    max-height: 100vh;
+    z-index: 100;
+    background: #ffffff;
+    box-shadow: 4px 0 28px rgba(0, 0, 0, 0.22);
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .farm-sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  .farm-sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    cursor: pointer;
+  }
+
+  .farm-sidebar-close-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  /* Основной контейнер */
+  .farm-layout {
+    display: block;
+    width: 100%;
+  }
+
+  .farm-content {
+    padding: 16px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .farm-card {
+    padding: 18px 14px;
+    border-radius: 14px;
+  }
+
+  .farm-main-title {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+
+  .farm-main-desc {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .farm-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .farm-card-header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Голосовая запись и загрузка аудио */
+  .farm-voice-section {
+    margin: 12px 0;
+  }
+
+  .farm-voice-tools {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .farm-voice-tools .file-upload-btn,
+  .farm-voice-tools button,
+  .farm-voice-tools .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  /* Параметры идеи */
+  .farm-params-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .farm-params-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .farm-priority-chips {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .farm-priority-chip {
+    padding: 8px 4px;
+    justify-content: center;
+    font-size: 12px;
+    min-height: 38px;
+  }
+
+  /* Кнопки действий формы */
+  .farm-form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .farm-form-actions .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  /* Прогресс и статус исследования */
+  .farm-progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .farm-progress-badge-wrap {
+    align-self: flex-start;
+  }
+
+  .live-intel-container {
+    margin: 14px 0;
+    border-radius: 12px;
+  }
+
+  .live-intel-header {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .live-intel-step-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Якорная навигация отчета */
+  .report-dashboard {
+    margin-top: 16px;
+  }
+
+  .report-anchor-nav {
+    top: 56px;
+    margin-bottom: 18px;
+    padding: 6px 8px;
+    gap: 6px;
+    border-radius: 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .report-anchor-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .report-anchor-nav a {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 7px;
+  }
+
+  .report-nav-pitch-btn {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 7px;
+    margin-left: 0;
+  }
+
+  /* Баннер вердикта */
+  .ui-verdict-banner {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .ui-verdict-main-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .ui-verdict-gauge-box {
+    width: 100%;
+    padding: 14px;
+  }
+
+  .ui-verdict-title {
+    font-size: 20px;
+  }
+
+  /* Сетки метрик и сценариев */
+  .report-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .scenario-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .scenario-card {
+    padding: 16px;
+  }
+
+  .scenario-value {
+    font-size: 24px;
+  }
+
+  /* Архитектурные варианты */
+  .variants-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .variant-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .variant-flow-diagram {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .variant-metric-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .fields-chips-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .variants-specs-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .personas-grid, .pains-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Таблицы со скроллом */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+
+  .report-table {
+    min-width: 480px;
+  }
+
+  /* Источники */
+  .source-card {
+    padding: 14px;
+  }
+
+  .sources-collapsed-card {
+    padding: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .sources-preview-domains {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Блок принятия решений */
+  .decision-box {
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+
+  .decision-verdict-banner {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .decision-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .decision-choice-card {
+    padding: 16px;
+  }
+
+  .decision-alt-tray {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .decision-alt-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .decision-alt-buttons .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .decision-primary-action-row {
+    width: 100%;
+  }
+
+  .decision-primary-action-row .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  .decision-footer-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .decision-share-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .decision-share-actions .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  /* Модальные окна */
+  .pitch-modal-overlay,
+  .confirm-modal-overlay,
+  .monitoring-modal-overlay {
+    padding: 8px;
+  }
+
+  .pitch-modal-container {
+    width: 100%;
+    max-width: 100%;
+    max-height: 94vh;
+    padding: 16px;
+    border-radius: 16px;
+    overflow-y: auto;
+  }
+
+  .pitch-card-preview-box {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pitch-card-render {
+    transform-origin: top center;
+  }
+
+  .pitch-modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pitch-modal-actions .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  .auth-page {
+    padding: 16px 10px;
+  }
+
+  .auth-card {
+    padding: 24px 16px;
+    border-radius: 16px;
+    max-width: 100%;
+  }
+
+  .auth-toggle-group {
+    width: 100%;
+  }
+
+  .auth-toggle-btn {
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+
+  .confirm-modal-card {
+    padding: 20px 16px;
+    max-width: 100%;
+  }
+
+  .confirm-modal-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .confirm-modal-actions .ui-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Страница MVP Sandbox */
+  .mvp-sandbox-container {
+    padding: 16px 12px;
+  }
+
+  .mvp-sandbox-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mvp-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .mvp-hero-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .mvp-title {
+    font-size: 20px;
+  }
+
+  .mvp-sandbox-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .mvp-panel {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .mvp-panel-header {
+    margin-bottom: 12px;
+  }
+
+  /* Мониторинг */
+  .monitoring-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .monitoring-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .monitoring-header .ui-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Small Phones (max-width: 480px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .farm-header {
+    padding: 0 8px;
+  }
+
+  .farm-content {
+    padding: 12px 8px;
+  }
+
+  .farm-card {
+    padding: 14px 12px;
+  }
+
+  .farm-main-title {
+    font-size: 18px;
+  }
+
+  .report-table-card {
+    padding: 14px 10px;
+  }
+
+  .decision-box {
+    padding: 14px 10px;
+  }
+
+  .variant-card {
+    padding: 14px 12px;
   }
 }
 

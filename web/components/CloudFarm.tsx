@@ -66,6 +66,7 @@ export default function CloudFarm(){
   const [searchQuery,setSearchQuery]=useState('');
   const [deleteModalOpen,setDeleteModalOpen]=useState(false);
   const [ideaToDelete,setIdeaToDelete]=useState<any>(null);
+  const [mobileSidebarOpen,setMobileSidebarOpen]=useState(false);
 
   const refresh=async()=>setIdeas(await api('/ideas'));
 
@@ -220,6 +221,16 @@ export default function CloudFarm(){
       {/* Верхняя навигационная панель */}
       <header className="farm-header">
         <div className="farm-header-left">
+          <button
+            type="button"
+            className="farm-mobile-menu-btn"
+            onClick={()=>setMobileSidebarOpen(!mobileSidebarOpen)}
+            aria-label="Открыть список идей"
+            aria-expanded={mobileSidebarOpen}
+          >
+            <Icon name={mobileSidebarOpen?'x':'menu'} size={18}/>
+            <span className="farm-mobile-ideas-tag">Идеи ({ideas.length})</span>
+          </button>
           <div className="farm-brand">
             <span className="farm-brand-mark"><Icon name="sparkles" size={20}/></span>
             <div>
@@ -240,7 +251,7 @@ export default function CloudFarm(){
           </div>
           <button
             type="button"
-            className="ui-btn ui-btn-subtle ui-btn-sm"
+            className="ui-btn ui-btn-subtle ui-btn-sm farm-logout-btn"
             onClick={()=>act(async()=>{await post('/auth/logout');setAccount(null);startNewIdea();})}
           >
             Выйти
@@ -250,17 +261,34 @@ export default function CloudFarm(){
 
       {/* Основная рабочая область */}
       <div className="farm-layout">
-        {/* Сайдбар со списком идей (зафиксирован sticky) */}
-        <aside className="farm-sidebar">
+        {/* Затемнение фона при открытом меню на мобильном */}
+        {mobileSidebarOpen&&(
+          <div
+            className="farm-sidebar-backdrop"
+            onClick={()=>setMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Сайдбар со списком идей */}
+        <aside className={`farm-sidebar ${mobileSidebarOpen?'is-mobile-open':''}`}>
           <div className="farm-sidebar-top">
             <div className="farm-sidebar-title-row">
               <h3>Мои идеи</h3>
               <span className="farm-ideas-count">{ideas.length} / {policy.budget.activeIdeas}</span>
+              <button
+                type="button"
+                className="farm-sidebar-close-btn"
+                onClick={()=>setMobileSidebarOpen(false)}
+                aria-label="Закрыть список"
+              >
+                <Icon name="x" size={18}/>
+              </button>
             </div>
             <button
               type="button"
               className="ui-btn ui-btn-primary ui-btn-block"
-              onClick={startNewIdea}
+              onClick={()=>{startNewIdea();setMobileSidebarOpen(false);}}
             >
               <Icon name="plus" size={18} />
               <span>Новая идея</span>
@@ -291,7 +319,7 @@ export default function CloudFarm(){
                   <div
                     key={idea.id}
                     className={`farm-idea-item ${isSelected?'selected':''}`}
-                    onClick={()=>open(idea.id)}
+                    onClick={()=>{open(idea.id);setMobileSidebarOpen(false);}}
                   >
                     <div className="farm-idea-item-header">
                       <Badge
