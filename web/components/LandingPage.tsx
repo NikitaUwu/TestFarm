@@ -85,7 +85,7 @@ export default function LandingPage({
             </div>
             <div className="landing-trust-item">
               <Icon name="checkCircle" size={16} className="text-emerald"/>
-              <span>До 20 ₽ на исследование</span>
+              <span>Автономное исследование за 2 минуты</span>
             </div>
             <div className="landing-trust-item">
               <Icon name="checkCircle" size={16} className="text-emerald"/>

@@ -165,7 +165,7 @@ export function WhatIfSandbox({ calculation }: WhatIfSandboxProps) {
           <div className="whatif-hero-stat">
             <span className="whatif-hero-label">ЧИСТАЯ ГОДОВАЯ ВЫГОДА</span>
             <div className="whatif-hero-num">{formatCurrency(annualNetProfit)}</div>
-            <span className="whatif-hero-sub">с учётом затрат на вычислительные мощности ИИ</span>
+            <span className="whatif-hero-sub">чистый эффект от высвобождения рабочего времени команды</span>
           </div>
 
           <div className="whatif-mini-grid">
@@ -175,9 +175,9 @@ export function WhatIfSandbox({ calculation }: WhatIfSandboxProps) {
               <small>~{annualHoursSaved} рабочих часов в год</small>
             </div>
             <div className="whatif-mini-card">
-              <span className="whatif-mini-label">Расходы на ИИ</span>
-              <strong>{formatCurrency(monthlyAiCost)} / мес</strong>
-              <small>~0.14 ₽ за одну операцию</small>
+              <span className="whatif-mini-label">Охват автоматизации</span>
+              <strong style={{ color: '#0284c7' }}>100%</strong>
+              <small>покрытие типового сценария</small>
             </div>
             <div className="whatif-mini-card">
               <span className="whatif-mini-label">Точка безубыточности</span>
@@ -187,7 +187,7 @@ export function WhatIfSandbox({ calculation }: WhatIfSandboxProps) {
             <div className="whatif-mini-card">
               <span className="whatif-mini-label">Рентабельность (ROI)</span>
               <strong style={{ color: '#10b981' }}>+{roiPercent}%</strong>
-              <small>отношение выгоды к расходам</small>
+              <small>коэффициент экономической отдачи</small>
             </div>
           </div>
 

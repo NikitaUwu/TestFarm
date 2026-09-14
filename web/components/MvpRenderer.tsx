@@ -160,11 +160,6 @@ export default function MvpRenderer({id}:{id:string}){
                       </div>
                     ))}
                   </div>
-                  {output.content?.usage?.cost!=null&&(
-                    <div className="mvp-usage-note">
-                      Стоимость генерации: {Number(output.content.usage.cost).toFixed(4)} ₽
-                    </div>
-                  )}
                 </div>
               ):(
                 <div className="mvp-error-result">

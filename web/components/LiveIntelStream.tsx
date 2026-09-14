@@ -55,7 +55,7 @@ const STEP_THOUGHTS: Record<string, { role: string; icon: string; headline: stri
     thoughts: [
       'Формирование Варианта 1: легковесный потоковый агент с минимальной задержкой…',
       'Формирование Варианта 2: валидированный пайплайн с многоуровневой проверкой правил…',
-      'Оценка аппаратных ресурсов и накладных расходов…',
+      'Оценка аппаратных ресурсов и времени отклика…',
     ],
   },
   prepareBaseline: {
@@ -73,7 +73,7 @@ const STEP_THOUGHTS: Record<string, { role: string; icon: string; headline: stri
     headline: 'Тестовые прогоны на контрольных сценариях',
     thoughts: [
       'Параллельный запуск вариантов на тестовых задачах…',
-      'Замер машинного времени, расхода токенов и процента успешных выполнений…',
+      'Замер машинного времени и процента успешных выполнений…',
       'Фиксация краевых случаев и отказов…',
     ],
   },
@@ -121,24 +121,21 @@ export function LiveIntelStream({ run, currentStepInfo }: LiveIntelStreamProps) 
   const currentStepKey = run.currentStep || 'analyzeIdea';
   const stepMeta = STEP_THOUGHTS[currentStepKey] || STEP_THOUGHTS.analyzeIdea;
 
-  // Подсчёт расходов и времени по реальным логам
-  const { totalCost, completedActors } = useMemo(() => {
-    let cost = 0;
-    const actors: Array<{ name: string; action: string; duration: string; cost: string }> = [];
+  // Список завершённых микро-операций по логам
+  const completedActors = useMemo(() => {
+    const actors: Array<{ name: string; action: string; duration: string }> = [];
     if (run.logs && Array.isArray(run.logs)) {
       for (const log of run.logs) {
-        if (log.usage?.costRub) cost += Number(log.usage.costRub);
         if (log.status === 'completed') {
           actors.push({
             name: log.actorName || 'Агент',
             action: log.action || 'Операция',
             duration: log.durationMs ? `${(log.durationMs / 1000).toFixed(1)} с` : '',
-            cost: log.usage?.costRub ? `${Number(log.usage.costRub).toFixed(3)} ₽` : '',
           });
         }
       }
     }
-    return { totalCost: cost.toFixed(3), completedActors: actors.slice(-4).reverse() };
+    return actors.slice(-4).reverse();
   }, [run.logs]);
 
   return (
@@ -153,9 +150,6 @@ export function LiveIntelStream({ run, currentStepInfo }: LiveIntelStreamProps) 
           <span className="live-intel-step">
             Этап: <strong>{currentStepInfo?.name || stepMeta.headline}</strong>
           </span>
-          {totalCost !== '0.000' && (
-            <span className="live-intel-cost">Расход: {totalCost} ₽</span>
-          )}
         </div>
       </div>
 

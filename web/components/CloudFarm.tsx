@@ -132,8 +132,8 @@ export default function CloudFarm(){
       form.set('file',new File([blob],`voice_record.${ext}`,{type:cleanMime}));
       const result=await api('/audio',{method:'POST',body:form});
       setAudioId(result.artifactId);
-      if(result.usage?.cost!=null){
-        setAudioCost(`Распознано: ${Number(result.usage.cost).toFixed(4)} ₽`);
+      if(result.text){
+        setAudioCost('Аудиозапись успешно расшифрована');
       }
       if(result.text){
         setText(prev=>prev?`${prev}\n\n${result.text}`:result.text);
@@ -161,8 +161,8 @@ export default function CloudFarm(){
       }
       const result=await res.json();
       if(result.artifactId)setAudioId(result.artifactId);
-      if(result.usage?.cost!=null){
-        setAudioCost(`Распознано: ${Number(result.usage.cost).toFixed(4)} ₽`);
+      if(result.text){
+        setAudioCost('Аудиозапись успешно расшифрована');
       }
       if(result.text){
         setText(prev=>prev?`${prev}\n\n${result.text}`:result.text);
@@ -234,12 +234,6 @@ export default function CloudFarm(){
         </div>
 
         <div className="farm-header-right">
-          {currentSpending&&(
-            <div className="farm-budget-pill">
-              <span className="farm-budget-dot" />
-              <span>Расход: <strong>{Number(currentSpending.actualRub||0).toFixed(2)} ₽</strong> из {policy.budget.maxRunRub} ₽</span>
-            </div>
-          )}
           <div className="farm-user-pill">
             <span className="farm-user-avatar">{account.username.charAt(0).toUpperCase()}</span>
             <span className="farm-user-name">{account.username}</span>
@@ -668,9 +662,6 @@ export default function CloudFarm(){
                             {log.durationMs!=null&&(
                               <span className="farm-log-time">{(log.durationMs/1000).toFixed(1)} с</span>
                             )}
-                            {log.usage?.costRub!=null&&(
-                              <span className="farm-log-cost">{Number(log.usage.costRub).toFixed(4)} ₽</span>
-                            )}
                           </div>
                           {log.error&&<p className="farm-log-error">{log.error}</p>}
                         </li>
@@ -722,6 +713,24 @@ export function CloudReport({
   const [copied,setCopied]=useState(false);
   const [pitchModalOpen,setPitchModalOpen]=useState(false);
   const [sourcesExpanded,setSourcesExpanded]=useState(false);
+  const [showOverrideMvp,setShowOverrideMvp]=useState(false);
+
+  const PRESET_CRITERIA=[
+    'Время генерации ответа < 3 секунд',
+    'Отсутствие фактических ошибок и галлюцинаций',
+    'Строгая структура данных (JSON/таблица)',
+    'Деловой и конструктивный тон ответов',
+    'Безопасная обработка некорректных входных данных',
+  ];
+
+  const addPresetCriterion=(text:string)=>{
+    setCriteria(prev=>{
+      const trimmed=prev.trim();
+      if(!trimmed)return`- ${text}`;
+      if(trimmed.includes(text))return prev;
+      return`${trimmed}\n- ${text}`;
+    });
+  };
 
   const viabilityScore=calculateViabilityScore(report);
 
@@ -767,14 +776,40 @@ export function CloudReport({
     <article className="report-dashboard">
       {/* Якорная навигационная панель отчёта */}
       <nav className="report-anchor-nav" aria-label="Разделы отчёта">
-        <a href="#verdict"><Icon name="rocket" size={15}/> Вердикт</a>
-        <a href="#economics"><Icon name="calculator" size={15}/> Экономика</a>
-        <a href="#variants"><Icon name="scale" size={15}/> Варианты</a>
-        <a href="#market"><Icon name="user" size={15}/> Рынок и ЦА</a>
-        <a href="#risks"><Icon name="shield" size={15}/> Риски</a>
-        <a href="#sources"><Icon name="search" size={15}/> Источники ({sourcesCount})</a>
-        <a href="#monitoring"><Icon name="activity" size={15}/> Мониторинг</a>
-        {!readOnly&&<a href="#decision" className="nav-accent"><Icon name="checkCircle" size={15}/> Решение</a>}
+        <a href="#verdict" title="Перейти к вердикту">
+          <Icon name="checkCircle" size={14}/>
+          <span>Вердикт</span>
+        </a>
+        <a href="#economics" title="Перейти к экономическому расчёту">
+          <Icon name="chart" size={14}/>
+          <span>Экономика</span>
+        </a>
+        <a href="#variants" title="Перейти к предложенным архитектурным вариантам">
+          <Icon name="card" size={14}/>
+          <span>Варианты</span>
+        </a>
+        <a href="#market" title="Перейти к целевой аудитории">
+          <Icon name="user" size={14}/>
+          <span>Рынок и ЦА</span>
+        </a>
+        <a href="#risks" title="Перейти к независимой критике и рискам">
+          <Icon name="shield" size={14}/>
+          <span>Риски</span>
+        </a>
+        <a href="#sources" title="Перейти к подтверждённым источникам">
+          <Icon name="report" size={14}/>
+          <span>Источники ({sourcesCount})</span>
+        </a>
+        <a href="#monitoring" title="Перейти к бизнес-мониторингу">
+          <Icon name="refresh" size={14}/>
+          <span>Мониторинг</span>
+        </a>
+        {!readOnly&&(
+          <a href="#decision" className="nav-accent" title="Перейти к блоку принятия решения">
+            <Icon name="rocket" size={14}/>
+            <span>Принятие решения</span>
+          </a>
+        )}
         <button
           type="button"
           className="report-nav-pitch-btn"
@@ -868,43 +903,106 @@ export function CloudReport({
         {/* What-If Sandbox: Интерактивный симулятор экономики */}
         <WhatIfSandbox calculation={report.calculation} />
 
-        {/* Сводная таблица вариантов */}
-        <div className="report-table-card">
-          <h3>Результаты контрольных прогонов вариантов</h3>
-          <div className="table-responsive">
-            <table className="report-table">
-              <thead>
-                <tr>
-                  <th>Вариант решения</th>
-                  <th>Машинное время</th>
-                  <th>Экономия на кейс</th>
-                  <th>Успешность тестов</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.calculation?.variants?.map((v:any)=>{
-                  const varInfo=report.plan?.variants?.find((p:any)=>p.id===v.variantId);
-                  return(
-                    <tr key={v.variantId}>
-                      <td><strong>{varInfo?.name||'Вариант'}</strong></td>
-                      <td>{v.machineSeconds!=null?`${v.machineSeconds.toFixed(2)} с`:'—'}</td>
-                      <td>
-                        {v.measuredEffect?.deltaSeconds!=null?(
-                          <span className="effect-positive">+{v.measuredEffect.deltaSeconds.toFixed(2)} с</span>
-                        ):('Нет данных')}
-                      </td>
-                      <td>
-                        <Badge variant={v.failures===0?'emerald':'amber'}>
-                          {v.attempts-v.failures} из {v.attempts} успешно
-                        </Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Сводная таблица вариантов / Расчётная модель */}
+        {(()=>{
+          const calcVariants = report.calculation?.variants || [];
+          const hasRunData = calcVariants.length > 0 && calcVariants.some((v:any)=>(v.attempts||0) > 0);
+
+          if(hasRunData){
+            return (
+              <div className="report-table-card">
+                <h3>Результаты контрольных прогонов вариантов</h3>
+                <div className="table-responsive">
+                  <table className="report-table">
+                    <thead>
+                      <tr>
+                        <th>Вариант решения</th>
+                        <th>Машинное время</th>
+                        <th>Экономия на кейс</th>
+                        <th>Успешность тестов</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {calcVariants.map((v:any)=>{
+                        const varInfo=report.plan?.variants?.find((p:any)=>p.id===v.variantId);
+                        return(
+                          <tr key={v.variantId}>
+                            <td><strong>{varInfo?.name||'Вариант'}</strong></td>
+                            <td>{v.machineSeconds!=null?`${v.machineSeconds.toFixed(2)} с`:'—'}</td>
+                            <td>
+                              {v.measuredEffect?.deltaSeconds!=null?(
+                                <span className="effect-positive">+{v.measuredEffect.deltaSeconds.toFixed(2)} с</span>
+                              ):(
+                                'Нет данных'
+                              )}
+                            </td>
+                            <td>
+                              <Badge variant={v.failures===0?'emerald':'amber'}>
+                                {v.attempts-v.failures} из {v.attempts} успешно
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="report-empty-trials-card">
+              <div className="empty-trials-header">
+                <div className="empty-trials-title-row">
+                  <div className="empty-trials-icon-box">
+                    <Icon name="scale" size={22} />
+                  </div>
+                  <div>
+                    <div className="empty-trials-tag-row">
+                      <h3>Контрольные замеры производительности вариантов</h3>
+                      <span className="empty-trials-badge">Расчётная модель (без запуска песочницы)</span>
+                    </div>
+                    <p className="empty-trials-sub">
+                      Физические прогоны в изолированной песочнице не выполнялись: для инструментального замера машинного времени и точности требуется прямое подключение внешних API или тестовый датасет.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="empty-trials-grid">
+                {(report.plan?.variants || [
+                  { id: 'v1', name: 'Автономный LLM-пайплайн', approach: 'Прямая обработка запроса с проверкой структуры' },
+                  { id: 'v2', name: 'Гибридный микросервис', approach: 'Детерминированная валидация структуры + Rules', useRules: true },
+                ]).map((variant:any, idx:number)=>(
+                  <div key={variant.id||idx} className="empty-trials-item">
+                    <div className="empty-item-top">
+                      <span className="empty-item-num">Вариант #{idx+1}</span>
+                      <Badge variant="neutral">Замеры: по допущениям</Badge>
+                    </div>
+                    <h4 className="empty-item-name">{variant.name}</h4>
+                    <p className="empty-item-desc">{variant.approach}</p>
+                    <div className="empty-item-features">
+                      <span className="empty-feature-tag">
+                        <Icon name="shield" size={13} />
+                        <span>{variant.useRules ? 'Rules микросервис включен' : 'Прямая оркестрация'}</span>
+                      </span>
+                      <span className="empty-feature-tag">
+                        <Icon name="clock" size={13} />
+                        <span>Расчётная задержка: ~1.5–2.5 с</span>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="empty-trials-footnote">
+                <Icon name="lightbulb" size={16} />
+                <span>Экономический эффект и высвобождение часов для предложенных вариантов смоделированы статистически и доступны в интерактивном симуляторе выше.</span>
+              </div>
+            </div>
+          );
+        })()}
       </section>
 
       {/* 3. Варианты решения */}
@@ -1105,96 +1203,254 @@ export function CloudReport({
         <section id="decision" className="report-section report-decision-section">
           <div className="report-section-header">
             <div>
-              <span className="report-section-tag">Действие</span>
+              <span className="report-section-tag">Финальный шаг</span>
               <h2>Принятие решения по идее</h2>
             </div>
           </div>
 
           <div className="decision-box">
+            {/* Статусный баннер рекомендации */}
+            <div className={`decision-verdict-banner ${
+              report.assessment?.recommendation==='Развивать'
+                ? 'is-develop'
+                : report.assessment?.recommendation==='Остановить'
+                ? 'is-stop'
+                : 'is-check'
+            }`}>
+              <div className="decision-verdict-icon">
+                <Icon
+                  name={
+                    report.assessment?.recommendation==='Развивать'
+                      ? 'rocket'
+                      : report.assessment?.recommendation==='Остановить'
+                      ? 'stop'
+                      : 'lightbulb'
+                  }
+                  size={22}
+                />
+              </div>
+              <div className="decision-verdict-info">
+                <div className="decision-verdict-tag-row">
+                  <span className="decision-verdict-label">Рекомендация аналитической системы:</span>
+                  <strong className="decision-verdict-badge">
+                    {report.assessment?.recommendation||'Сначала проверить'}
+                  </strong>
+                </div>
+                <p className="decision-verdict-text">
+                  {report.assessment?.verdict||
+                    (report.assessment?.recommendation==='Развивать'
+                      ? 'Исследование подтвердило жизнеспособность гипотезы и экономический эффект. Задайте критерии приёмки и запустите сборку рабочего прототипа.'
+                      : 'Перед инвестициями в разработку рекомендуется устранить выявленные риски или проверить гипотезы.')}
+                </p>
+              </div>
+            </div>
+
             {report.assessment?.recommendation==='Развивать'?(
               <div className="decision-develop-flow">
-                <label className="farm-label">
-                  <span>Критерии приёмки прототипа (MVP), по одному на строку:</span>
+                <div className="decision-form-card">
+                  <div className="decision-form-header">
+                    <Icon name="rocket" size={18}/>
+                    <span>Спецификация и критерии приёмки прототипа (MVP)</span>
+                  </div>
+                  <p className="decision-form-hint">
+                    Укажите требования к прототипу (по одному на строку) или воспользуйтесь быстрыми шаблонами:
+                  </p>
+
+                  <div className="decision-preset-chips">
+                    {PRESET_CRITERIA.map((preset,idx)=>(
+                      <button
+                        key={idx}
+                        type="button"
+                        className="decision-preset-chip"
+                        onClick={()=>addPresetCriterion(preset)}
+                      >
+                        <Icon name="plus" size={12}/>
+                        <span>{preset}</span>
+                      </button>
+                    ))}
+                  </div>
+
                   <textarea
                     rows={4}
                     value={criteria}
                     onChange={e=>setCriteria(e.target.value)}
                     placeholder="Например:
-- Ответ формируется не дольше 2 секунд
-- Тональность ответа вежливая и деловая
+- Время формирования ответа < 2 секунд
+- Тональность ответов деловая и вежливая
 - Выделены номер заказа и статус доставки"
-                    className="farm-textarea"
+                    className="farm-textarea decision-textarea"
                   />
-                </label>
-                <div className="decision-actions">
-                  <button
-                    type="button"
-                    disabled={busy||!criteria.trim()}
-                    className="ui-btn ui-btn-primary ui-btn-lg"
-                    onClick={()=>decide('develop')}
-                  >
-                    <Icon name="rocket" size={18}/>
-                    <span>Собрать рабочий прототип (MVP)</span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className="ui-btn ui-btn-secondary"
-                    onClick={()=>decide('revise')}
-                  >
-                    Сначала проверить допущения
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className="ui-btn ui-btn-subtle"
-                    onClick={()=>decide('stop')}
-                  >
-                    Остановить идею
-                  </button>
+
+                  <div className="decision-primary-action-row">
+                    <button
+                      type="button"
+                      disabled={busy||!criteria.trim()}
+                      className="ui-btn ui-btn-primary ui-btn-lg decision-submit-btn"
+                      onClick={()=>decide('develop')}
+                    >
+                      <Icon name="rocket" size={18}/>
+                      <span>Собрать рабочий прототип (MVP)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="decision-alt-tray">
+                  <span className="decision-alt-label">Альтернативные решения:</span>
+                  <div className="decision-alt-buttons">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="ui-btn ui-btn-secondary ui-btn-sm"
+                      onClick={()=>decide('revise')}
+                    >
+                      Сначала проверить допущения
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="ui-btn ui-btn-subtle ui-btn-sm"
+                      onClick={()=>decide('stop')}
+                    >
+                      Остановить идею
+                    </button>
+                  </div>
                 </div>
               </div>
             ):(
-              <div className="decision-actions">
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="ui-btn ui-btn-secondary"
-                  onClick={()=>decide('revise')}
-                >
-                  Отправить на доработку
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="ui-btn ui-btn-danger-outline"
-                  onClick={()=>decide('stop')}
-                >
-                  Остановить идею
-                </button>
+              <div className="decision-non-develop-flow">
+                <div className="decision-cards-grid">
+                  {/* Вариант 1: Проверить допущения */}
+                  <div className="decision-choice-card">
+                    <div className="choice-card-top">
+                      <div className="choice-card-icon is-primary">
+                        <Icon name="refresh" size={18}/>
+                      </div>
+                      <h4>Отправить на доработку</h4>
+                    </div>
+                    <p className="choice-card-desc">
+                      Скорректировать гипотезы аудитории, ключевые допущения или провести дополнительную валидацию.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="ui-btn ui-btn-primary ui-btn-md choice-card-btn"
+                      onClick={()=>decide('revise')}
+                    >
+                      <Icon name="refresh" size={15}/>
+                      <span>Отправить на доработку</span>
+                    </button>
+                  </div>
+
+                  {/* Вариант 2: Остановить идею */}
+                  <div className="decision-choice-card">
+                    <div className="choice-card-top">
+                      <div className="choice-card-icon is-danger">
+                        <Icon name="stop" size={18}/>
+                      </div>
+                      <h4>Остановить идею</h4>
+                    </div>
+                    <p className="choice-card-desc">
+                      Зафиксировать завершение исследования и отправить идею в архив, не расходуя ресурсы разработки.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="ui-btn ui-btn-danger-outline ui-btn-md choice-card-btn"
+                      onClick={()=>decide('stop')}
+                    >
+                      <Icon name="trash" size={15}/>
+                      <span>Остановить и архивировать</span>
+                    </button>
+                  </div>
+
+                  {/* Вариант 3: Ручной запуск MVP вопреки рекомендации */}
+                  <div className="decision-choice-card">
+                    <div className="choice-card-top">
+                      <div className="choice-card-icon is-amber">
+                        <Icon name="rocket" size={18}/>
+                      </div>
+                      <h4>Собрать MVP (ручной запуск)</h4>
+                    </div>
+                    <p className="choice-card-desc">
+                      Проверить гипотезу полевым тестом, несмотря на предупреждения аналитика и риски.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className="ui-btn ui-btn-secondary ui-btn-md choice-card-btn"
+                      onClick={()=>setShowOverrideMvp(!showOverrideMvp)}
+                    >
+                      <Icon name={showOverrideMvp?'chevronUp':'chevronDown'} size={15}/>
+                      <span>{showOverrideMvp?'Скрыть форму MVP':'Настроить критерии MVP'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {showOverrideMvp&&(
+                  <div className="decision-form-card decision-override-form">
+                    <div className="decision-form-header">
+                      <Icon name="rocket" size={18}/>
+                      <span>Критерии приёмки для принудительной сборки прототипа</span>
+                    </div>
+                    <div className="decision-preset-chips">
+                      {PRESET_CRITERIA.map((preset,idx)=>(
+                        <button
+                          key={idx}
+                          type="button"
+                          className="decision-preset-chip"
+                          onClick={()=>addPresetCriterion(preset)}
+                        >
+                          <Icon name="plus" size={12}/>
+                          <span>{preset}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={criteria}
+                      onChange={e=>setCriteria(e.target.value)}
+                      placeholder="Критерии приёмки прототипа (MVP)..."
+                      className="farm-textarea decision-textarea"
+                    />
+                    <div className="decision-primary-action-row">
+                      <button
+                        type="button"
+                        disabled={busy||!criteria.trim()}
+                        className="ui-btn ui-btn-primary ui-btn-md"
+                        onClick={()=>decide('develop')}
+                      >
+                        <Icon name="rocket" size={16}/>
+                        <span>Запустить сборку прототипа (MVP)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="share-report-row">
-              <button
-                type="button"
-                className="ui-btn ui-btn-primary ui-btn-sm"
-                onClick={()=>setPitchModalOpen(true)}
-              >
-                <Icon name="share" size={14}/>
-                <span>Pitch Card идеи</span>
-              </button>
-              <button
-                type="button"
-                className="ui-btn ui-btn-subtle ui-btn-sm"
-                onClick={handleShare}
-              >
-                <Icon name="copy" size={14}/>
-                <span>{copied?'Ссылка скопирована!':'Поделиться ссылкой на отчёт'}</span>
-              </button>
-            </div>
+            {/* Подвал с шерингом и статусом */}
+            <div className="decision-footer-bar">
+              <div className="decision-share-actions">
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-primary ui-btn-sm"
+                  onClick={()=>setPitchModalOpen(true)}
+                >
+                  <Icon name="share" size={14}/>
+                  <span>Pitch Card идеи</span>
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-subtle ui-btn-sm"
+                  onClick={handleShare}
+                >
+                  <Icon name="copy" size={14}/>
+                  <span>{copied?'Ссылка скопирована!':'Поделиться ссылкой на отчёт'}</span>
+                </button>
+              </div>
 
-            {message&&<p role="status" className="decision-status-msg">{message}</p>}
+              {message&&<p role="status" className="decision-status-msg">{message}</p>}
+            </div>
           </div>
         </section>
       )}
