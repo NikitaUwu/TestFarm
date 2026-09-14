@@ -62,7 +62,7 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
   return {message:normalizedMessage,choice,usage,model,generationId:response.headers.get('X-Generation-Id')||result.id||null};
  }
  async chat(system:string,data:unknown,schema:Record<string,unknown>,role=''){
-  const tokenCap=role==='source_researcher'?2048:(role==='critic'?4096:undefined);
+  const tokenCap=role==='source_researcher'||role==='critic'?4096:undefined;
   const extra:Record<string,unknown>={response_format:{type:'json_schema',json_schema:{name:'farm_step',strict:true,schema}}};
   if(tokenCap){extra.max_tokens=tokenCap;extra.max_completion_tokens=tokenCap;}
   const result=await this.completion(system,data,this.modelFor(role),extra);
