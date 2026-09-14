@@ -119,8 +119,15 @@ export async function runStage(jobId:string,token:string,name:string){
    const sources=await db().select().from(S.sources).where(eq(S.sources.runId,run.id));
    const cited=new Set((data.researchMarketAndEvidence?.claims||[]).filter((c:any)=>c.provenance==='EXTERNAL_FACT').map((c:any)=>c.sourceId));
    const supported=sources.filter(s=>s.content.snippet&&cited.has(s.id));
-   const calculation=data.calculateEffect||{};const enough=calculation.eligible===true&&supported.length>=config.evidence.minimumSources&&new Set(supported.map(s=>s.content.organization).filter(Boolean)).size>=config.evidence.minimumOrganizations&&(data.researchMarketAndEvidence?.alternatives?.length||0)>=config.evidence.minimumAlternatives;
-   result=await ask(run.id,config,'critic',prompts.criticalAssessment,{idea:data.analyzeIdea,research:data.researchMarketAndEvidence,hypotheses:data.buildHypotheses,calculation,insufficientEvidence:!enough},C.critique);
+    const calculation=data.calculateEffect||{};const enough=calculation.eligible===true&&supported.length>=config.evidence.minimumSources&&new Set(supported.map(s=>s.content.organization).filter(Boolean)).size>=config.evidence.minimumOrganizations&&(data.researchMarketAndEvidence?.alternatives?.length||0)>=config.evidence.minimumAlternatives;
+    const criticInput={
+     idea:{title:data.analyzeIdea?.title,problem:data.analyzeIdea?.problem,audience:data.analyzeIdea?.audience,value:data.analyzeIdea?.value},
+     research:{summary:data.researchMarketAndEvidence?.summary,alternatives:data.researchMarketAndEvidence?.alternatives?.slice(0,3),gaps:data.researchMarketAndEvidence?.gaps?.slice(0,5),confirmedClaims:(data.researchMarketAndEvidence?.claims||[]).filter((c:any)=>c.provenance==='EXTERNAL_FACT').slice(0,5).map((c:any)=>c.claim)},
+     hypotheses:data.buildHypotheses?.items?.slice(0,4),
+     calculation:{eligible:calculation.eligible===true,variants:(calculation.variants||[]).map((v:any)=>({variantId:v.variantId,eligible:v.eligible,measuredEffect:v.measuredEffect,machineSeconds:v.machineSeconds,quality:v.quality,failures:v.failures})),warnings:calculation.warnings||[]},
+     insufficientEvidence:!enough
+    };
+    result=await ask(run.id,config,'critic',prompts.criticalAssessment,criticInput,C.critique);
    if(result.recommendation==='Развивать'&&(!enough||result.hardBlockers.length)){result.recommendation='Недостаточно данных';result.reasons.push('Программные ворота доказательности не пройдены');}
    result.gates={eligible:enough,calculationEligible:calculation.eligible===true,sourceCount:sources.length,supportedSourceCount:supported.length};
   }else if(name==='buildReport'){
