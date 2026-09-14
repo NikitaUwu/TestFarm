@@ -1006,29 +1006,213 @@ export function CloudReport({
       </section>
 
       {/* 3. Варианты решения */}
-      <section id="variants" className="report-section">
+      <section id="variants" className="report-section variants-section">
         <div className="report-section-header">
           <div>
-            <span className="report-section-tag">Архитектура</span>
+            <span className="report-section-tag">Архитектура и варианты</span>
             <h2>Предложенные варианты решения</h2>
           </div>
+          <p className="report-section-sub">
+            Сравнительный инженерный анализ альтернативных подходов к автоматизации процесса.
+          </p>
         </div>
-        <div className="variants-cards-grid">
-          {report.plan?.variants?.map((variant:any,idx:number)=>(
-            <div key={variant.id||idx} className="variant-card">
-              <div className="variant-card-header">
-                <span className="variant-number">Вариант #{idx+1}</span>
-                <h4>{variant.name}</h4>
+
+        {/* Карточка целевого бизнес-сценария */}
+        {report.plan?.scenario&&(
+          <div className="variants-scenario-card">
+            <div className="scenario-card-header">
+              <div className="scenario-icon-box">
+                <Icon name="card" size={18}/>
               </div>
-              <p className="variant-approach">{variant.approach}</p>
-              {variant.useRules&&(
-                <div className="variant-rule-badge">
-                  <Icon name="shield" size={14}/> Включена детерминированная валидация структуры
-                </div>
-              )}
+              <div className="scenario-header-text">
+                <span className="scenario-sub-badge">Целевой бизнес-сценарий</span>
+                <h3>{report.plan.scenario}</h3>
+              </div>
             </div>
-          ))}
+            <div className="scenario-meta-row">
+              <span className="scenario-meta-pill">
+                <Icon name="rocket" size={12}/>
+                <span>{report.plan.executable!==false?'Готов к сборке в MVP':'Моделирование без внешних интеграций'}</span>
+              </span>
+              <span className="scenario-meta-pill">
+                <Icon name="shield" size={12}/>
+                <span>Автономная серверная обработка</span>
+              </span>
+              <span className="scenario-meta-pill">
+                <Icon name="scale" size={12}/>
+                <span>2 альтернативных пайплайна</span>
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Сравнительная сетка карточек вариантов */}
+        <div className="variants-cards-grid">
+          {report.plan?.variants?.map((variant:any,idx:number)=>{
+            const isRecommended=variant.useRules||idx===1;
+            const title=variant.name&&!variant.name.includes('_')
+              ? variant.name
+              : variant.useRules
+              ? 'Гибридный микросервис (LLM + Rules)'
+              : 'Автономный LLM-пайплайн (прямая генерация)';
+
+            return(
+              <div key={variant.id||idx} className={`variant-card ${isRecommended?'is-recommended':''}`}>
+                <div className="variant-card-header">
+                  <div className="variant-header-top">
+                    <span className="variant-number">Вариант #{idx+1}</span>
+                    {isRecommended?(
+                      <Badge variant="accent">Рекомендуется для MVP</Badge>
+                    ):(
+                      <Badge variant="neutral">Базовый вариант</Badge>
+                    )}
+                  </div>
+                  <h4 className="variant-title">{title}</h4>
+                  {variant.name&&variant.name.includes('_')&&(
+                    <code className="variant-id-tag">{variant.name}</code>
+                  )}
+                </div>
+
+                <p className="variant-approach">{variant.approach}</p>
+
+                {/* Схема архитектурного потока */}
+                <div className="variant-flow-box">
+                  <span className="flow-title">Архитектурный поток:</span>
+                  <div className="variant-flow-diagram">
+                    <span className="flow-step">
+                      <Icon name="user" size={12}/>
+                      <span>Вход</span>
+                    </span>
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-step">
+                      <Icon name="sparkles" size={12}/>
+                      <span>LLM</span>
+                    </span>
+                    {variant.useRules&&(
+                      <>
+                        <span className="flow-arrow">→</span>
+                        <span className="flow-step is-accent">
+                          <Icon name="shield" size={12}/>
+                          <span>Rules Microservice</span>
+                        </span>
+                      </>
+                    )}
+                    <span className="flow-arrow">→</span>
+                    <span className="flow-step is-final">
+                      <Icon name="check" size={12}/>
+                      <span>Ответ</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Таблица характеристик и компромиссов */}
+                <div className="variant-metrics-table">
+                  <div className="variant-metric-row">
+                    <span className="metric-label">Контроль структуры:</span>
+                    <span className={`metric-val ${variant.useRules?'text-emerald':'text-neutral'}`}>
+                      {variant.useRules?'Строгий (HTTP валидатор)':'Вероятностный (LLM)'}
+                    </span>
+                  </div>
+                  <div className="variant-metric-row">
+                    <span className="metric-label">Защита от ошибок:</span>
+                    <span className={`metric-val ${variant.useRules?'text-emerald':'text-amber'}`}>
+                      {variant.useRules?'Высокая (детерминированная)':'Базовая (на уровне промпта)'}
+                    </span>
+                  </div>
+                  <div className="variant-metric-row">
+                    <span className="metric-label">Скорость отклика:</span>
+                    <span className="metric-val text-neutral">
+                      {variant.useRules?'~2.0–2.5 с':'~1.2–1.8 с'}
+                    </span>
+                  </div>
+                  <div className="variant-metric-row">
+                    <span className="metric-label">Сложность стека:</span>
+                    <span className="metric-val text-neutral">
+                      {variant.useRules?'Связка микросервисов':'Одиночный вызов'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Системный промпт под спойлером */}
+                {variant.prompt&&(
+                  <details className="variant-prompt-details">
+                    <summary className="variant-prompt-summary">
+                      <Icon name="settings" size={13}/>
+                      <span>Системный промпт агента</span>
+                      <Icon name="chevronDown" size={12} className="summary-chevron"/>
+                    </summary>
+                    <pre className="variant-prompt-text">{variant.prompt}</pre>
+                  </details>
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Блок структуры данных и контракта полей */}
+        {report.plan?.fields?.length>0&&(
+          <div className="variants-fields-card">
+            <div className="fields-card-header">
+              <Icon name="card" size={16}/>
+              <h4>Контракт и атрибуты данных решения</h4>
+            </div>
+            <p className="fields-card-desc">
+              Параметры, с которыми оперирует сценарий при обработке кейсов:
+            </p>
+            <div className="fields-chips-grid">
+              {report.plan.fields.map((f:any,i:number)=>(
+                <div key={i} className="field-spec-chip">
+                  <div className="field-spec-top">
+                    <code className="field-spec-name">{f.name}</code>
+                    <span className="field-spec-type">{f.type||'string'}</span>
+                  </div>
+                  {f.label&&<span className="field-spec-label">{f.label}</span>}
+                  {f.description&&<p className="field-spec-desc">{f.description}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Сетка: Критерии приёмки и Границы сценария */}
+        {((report.plan?.acceptance&&report.plan.acceptance.length>0)||
+          (report.plan?.limitations&&report.plan.limitations.length>0))&&(
+          <div className="variants-specs-row">
+            {report.plan?.acceptance?.length>0&&(
+              <div className="variants-spec-col">
+                <div className="spec-col-header">
+                  <Icon name="checkCircle" size={16} className="text-emerald"/>
+                  <h4>Критерии приёмки сценария</h4>
+                </div>
+                <ul className="spec-checklist">
+                  {report.plan.acceptance.map((item:string,i:number)=>(
+                    <li key={i}>
+                      <Icon name="check" size={14} className="text-emerald"/>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {report.plan?.limitations?.length>0&&(
+              <div className="variants-spec-col">
+                <div className="spec-col-header">
+                  <Icon name="shield" size={16} className="text-amber"/>
+                  <h4>Границы и ограничения решения (Scope)</h4>
+                </div>
+                <ul className="spec-limitations-list">
+                  {report.plan.limitations.map((item:string,i:number)=>(
+                    <li key={i}>
+                      <Icon name="alertTriangle" size={14} className="text-amber"/>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 4. Аудитория и рынок */}
