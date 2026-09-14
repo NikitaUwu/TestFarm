@@ -29,21 +29,21 @@ export default function LandingPage({
         <nav className="landing-nav">
           <a href="/docs" className="landing-nav-link">
             <Icon name="report" size={16}/>
-            <span>Как это работает</span>
+            <span className="landing-nav-link-text">Как это работает</span>
           </a>
           <button
             type="button"
-            className="ui-btn ui-btn-subtle"
+            className="ui-btn ui-btn-subtle landing-login-btn"
             onClick={()=>setAuthMode('login')}
           >
             Войти
           </button>
           <button
             type="button"
-            className="ui-btn ui-btn-primary"
+            className="ui-btn ui-btn-primary landing-register-btn"
             onClick={()=>setAuthMode('register')}
           >
-            <span>Начать бесплатно</span>
+            <span>Начать<span className="landing-btn-desktop-text"> бесплатно</span></span>
             <Icon name="arrowRight" size={16}/>
           </button>
         </nav>

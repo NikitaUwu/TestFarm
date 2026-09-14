@@ -3360,6 +3360,53 @@ h1, h2, h3, h4, p {
     align-items: center;
   }
 
+  /* Быстрые шаблоны на мобильном: горизонтальная компактная карусель */
+  .ui-templates-container {
+    margin: 12px 0 16px;
+  }
+
+  .ui-templates-header {
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .ui-templates-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    margin: 0 -14px;
+    padding: 2px 14px 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .ui-templates-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ui-template-card {
+    flex: 0 0 230px;
+    min-width: 230px;
+    padding: 12px;
+    border-radius: 10px;
+    gap: 6px;
+  }
+
+  .ui-template-title {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .ui-template-text {
+    font-size: 11.5px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+  }
+
   /* Голосовая запись и загрузка аудио */
   .farm-voice-section {
     margin: 12px 0;
@@ -4760,37 +4807,228 @@ h1, h2, h3, h4, p {
 }
 
 @media (max-width: 768px) {
+  /* Шапка начальной страницы (Landing Header) */
   .landing-header {
-    padding: 0 18px;
+    height: 56px;
+    padding: 0 12px;
+    gap: 8px;
   }
+
+  .landing-brand {
+    gap: 8px;
+  }
+
+  .landing-brand-text strong {
+    font-size: 14.5px;
+    letter-spacing: -0.2px;
+  }
+
+  .landing-brand-tag {
+    display: none;
+  }
+
+  .landing-nav {
+    gap: 6px;
+  }
+
+  .landing-nav-link {
+    display: none;
+  }
+
+  .landing-login-btn {
+    padding: 6px 10px;
+    font-size: 12.5px;
+  }
+
+  .landing-register-btn {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+
+  .landing-btn-desktop-text {
+    display: none;
+  }
+
+  /* Верхняя часть (Landing Hero) */
+  .landing-hero {
+    padding: 24px 14px 36px;
+    gap: 28px;
+  }
+
+  .landing-hero-badge {
+    font-size: 11.5px;
+    padding: 5px 12px;
+    margin-bottom: 14px;
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.35;
+  }
+
   .landing-hero-title {
-    font-size: 32px;
+    font-size: 25px;
+    line-height: 1.25;
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
   }
+
+  .landing-hero-desc {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    color: #475569;
+  }
+
+  .landing-hero-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .landing-hero-actions .ui-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .landing-trust-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 8px;
+    font-size: 11.5px;
+  }
+
+  .landing-trust-item {
+    gap: 6px;
+    align-items: flex-start;
+    line-height: 1.3;
+  }
+
+  .landing-preview-card {
+    border-radius: 14px;
+  }
+
+  .landing-preview-header {
+    padding: 10px 14px;
+  }
+
+  .landing-preview-title {
+    font-size: 11px;
+  }
+
+  .landing-preview-body {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .landing-preview-verdict {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .landing-verdict-icon-box {
+    width: 36px;
+    height: 36px;
+  }
+
+  .landing-preview-verdict strong {
+    font-size: 13.5px;
+  }
+
+  .landing-preview-verdict p {
+    font-size: 12px;
+  }
+
+  .landing-preview-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .landing-stat-box {
+    padding: 8px 4px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+    margin: 2px 0;
+  }
+
+  .stat-sub {
+    font-size: 9.5px;
+  }
+
   .landing-pipeline-grid, .landing-features-grid {
     grid-template-columns: 1fr;
   }
+
   .landing-cta-box {
     flex-direction: column;
     text-align: center;
     padding: 36px 24px;
   }
+
   .docs-tech-card {
     grid-template-columns: 1fr;
   }
+
   .farm-params-grid {
     grid-template-columns: 1fr;
   }
+
   .landing-footer-inner {
     flex-direction: column;
     gap: 16px;
     text-align: center;
   }
+
   .ui-verdict-main-row {
     flex-direction: column;
     align-items: stretch;
   }
+
   .ui-verdict-gauge-box {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-header {
+    padding: 0 8px;
+  }
+
+  .landing-brand-text strong {
+    font-size: 13.5px;
+  }
+
+  .farm-brand-mark {
+    width: 26px;
+    height: 26px;
+  }
+
+  .landing-hero-title {
+    font-size: 22px;
+  }
+
+  .landing-preview-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .landing-stat-box {
+    padding: 8px 10px;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .landing-stat-box .stat-sub {
+    display: none;
   }
 }
 
