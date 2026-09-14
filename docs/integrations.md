@@ -4,13 +4,13 @@
 | --- | --- | --- |
 | RouterAI / Qwen3.5-9B | Идея, ограниченные материалы этапа, схема ответа | Структурированный результат, usage |
 | RouterAI / gpt-oss-120b | Материалы критической оценки и расчёт | Независимая критика; только criticalAssessment |
-| RouterAI / Microsoft MAI Transcribe 2 | Аудиофайл, русский язык | Текст, usage, generation ID |
+| RouterAI / Whisper Large V3 Turbo | Аудиофайл, русский язык | Текст, usage, generation ID |
 | RouterAI Web Search / Exa | Поисковый запрос | Обычный текст и url_citation annotations |
 | Neon | Аккаунты, версии, очередь, результаты, журналы | PostgreSQL persistence |
 | Private Blob | Аудио, dataset, report | Приватные файлы через серверную проверку владельца |
 | Python / Rules | ID расчёта либо поля/результат | Детерминированные вычисления и валидация |
 
-RouterAI base URL: https://routerai.ru/api/v1. Авторизация Bearer ROUTERAI_API_KEY. Модели фиксируются в ProviderProfile: qwen/qwen3.5-9b, openai/gpt-oss-120b, microsoft/mai-transcribe-2. Fallback отсутствует, retry использует ту же модель.
+RouterAI base URL: https://routerai.ru/api/v1. Авторизация Bearer ROUTERAI_API_KEY. Модели фиксируются в ProviderProfile: qwen/qwen3.5-9b, openai/gpt-oss-120b, openai/whisper-large-v3-turbo. Fallback отсутствует, retry использует ту же модель.
 
 Поиск использует plugins: id=web, engine=exa, max_results=3 или 5. Следующий вызов основной модели без web plugin получает строгую JSON Schema. Источники содержат только возвращённые citations; отсутствие даты означает null, отсутствие excerpt не доказывает факт. Действия read_page нет.
 

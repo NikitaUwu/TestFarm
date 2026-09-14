@@ -14,11 +14,20 @@ export async function boundedJson(response:Response,limit=1048576){
  const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
  while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new IntegrationError('RouterAI','Ответ превышает лимит');}chunks.push(value);}
  let result:any;try{result=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{throw new IntegrationError('RouterAI',response.ok?'Некорректный JSON':`HTTP ${response.status}`,[429,500,502,503,504].includes(response.status));}
- if(!response.ok){
-  const messages:Record<number,string>={400:'Запрос отклонён',401:'Ключ не принят',402:'Недостаточно средств',403:'Нет доступа к модели',429:'Достигнут лимит запросов'};
-  // Provider error bodies may echo credentials or private inputs; never persist them verbatim.
-  throw new IntegrationError('RouterAI',`${messages[response.status]||'Сервис недоступен'} (HTTP ${response.status})`,[429,500,502,503,504].includes(response.status),result.usage||{});
- }
+  if(!response.ok){
+   const messages:Record<number,string>={400:'Запрос отклонён',401:'Ключ не принят',402:'Недостаточно средств',403:'Нет доступа к модели',429:'Достигнут лимит запросов',503:'Сервис или модель временно недоступны'};
+   let detail='';
+   if(typeof result?.error==='string'){
+     try{const parsed=JSON.parse(result.error);detail=parsed?.error?.message||result.error;}catch{detail=result.error;}
+   }else if(result?.error?.message){
+     detail=String(result.error.message);
+   }else if(result?.detail){
+     detail=String(result.detail);
+   }
+   const sanitizedDetail=detail?detail.slice(0,200).replace(/sk-[a-zA-Z0-9_\-]{8,}/g,'***'):'';
+   const msg=sanitizedDetail?`${messages[response.status]||'Сервис недоступен'}: ${sanitizedDetail} (HTTP ${response.status})`:`${messages[response.status]||'Сервис недоступен'} (HTTP ${response.status})`;
+   throw new IntegrationError('RouterAI',msg,[429,500,502,503,504].includes(response.status),result?.usage||{});
+  }
  return result;
 }
 export class RouterAIClient implements LLMProvider,SpeechProvider{
@@ -80,7 +89,8 @@ export class RouterAIClient implements LLMProvider,SpeechProvider{
  }
  async transcribe(audio:Blob,filename:string){
   if(audio.size>this.config.budget.audioBytes)throw new IntegrationError('RouterAI','Файл превышает лимит');
-  const body=new FormData();body.append('file',audio,filename);body.append('model',this.config.provider.speechModel);body.append('language','ru');body.append('response_format','verbose_json');
+  const file=audio instanceof File?audio:new File([await audio.arrayBuffer()],filename,{type:audio.type||'audio/webm'});
+  const body=new FormData();body.append('file',file,filename);body.append('model',this.config.provider.speechModel);body.append('language','ru');body.append('response_format','verbose_json');
   let response:Response;try{response=await fetch(this.config.provider.baseUrl+'/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+required('ROUTERAI_API_KEY')},body,signal:AbortSignal.timeout(120000)});}catch{throw new IntegrationError('RouterAI','Распознавание не завершено из-за сетевой ошибки',true);}
   const result=await boundedJson(response),usage=result.usage||{},model=this.config.provider.speechModel;
   if(!result.text?.trim())throw new IntegrationError('RouterAI','Речь не распознана',false,usage,model);

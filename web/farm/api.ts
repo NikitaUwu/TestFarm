@@ -42,7 +42,7 @@ export async function farmApi(request:NextRequest,path:string[]){
   }
   if(!['GET','HEAD'].includes(request.method)){mutation(request);await rate('write:'+user.id,100);}
   if(path[0]==='audio'&&request.method==='POST'){
-   await rate('audio:'+user.id,5,3600);
+   await rate('audio:'+user.id,60,3600);
    if(Number(request.headers.get('content-length')||0)>configuration().budget.audioBytes+65536)throw new ApiError(413,'Аудиофайл слишком большой');
    const form=await request.formData(),file=form.get('file');if(!(file instanceof File))throw new ApiError(400,'Добавьте аудиофайл');
    let artifactId:string;

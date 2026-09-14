@@ -153,19 +153,12 @@ export default function CloudFarm(){
     setBusy(true);
     setError('');
     try{
-      const body=new FormData();
-      body.append('file',file,file.name);
-      const res=await fetch('/api/audio/transcribe',{method:'POST',body});
-      if(!res.ok){
-        const errData=await res.json().catch(()=>({error:'Ошибка распознавания'}));
-        throw new Error(errData.error||`HTTP ${res.status}`);
-      }
-      const result=await res.json();
+      const form=new FormData();
+      form.append('file',file,file.name);
+      const result=await api('/audio',{method:'POST',body:form});
       if(result.artifactId)setAudioId(result.artifactId);
       if(result.text){
         setAudioCost('Аудиозапись успешно расшифрована');
-      }
-      if(result.text){
         setText(prev=>prev?`${prev}\n\n${result.text}`:result.text);
       }
       if(result.warning)setError(result.warning);
